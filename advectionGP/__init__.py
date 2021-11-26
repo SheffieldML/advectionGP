@@ -33,20 +33,7 @@ class EQ(Kernel):
         self.N_D = N_D
         self.N_feat = N_feat
         
-    def computePhi(self,coords): #deprecated
-        """
-        ComputePhi (posterior matrix of basis vectors)
-        Arguments:
-            coords = an N by N_D array of locations
-        """
-        assert self.W is not None, "Need to call generateFeatures before computing phi."
-        
-        norm = 1./np.sqrt(self.N_feat)
-        c=np.sqrt(2.0)/(self.l2)
-        phiMatrix = norm*np.sqrt(2*self.sigma2)*np.cos(c*(self.W@coords)+ self.b[:,None])
-        #phiMatrix = phiMatrix.reshape(self.N_feat,Nt,Nx,Ny)
-        return phiMatrix
-        
+ 
     def getPhi(self,coords):
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
