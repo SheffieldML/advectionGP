@@ -33,7 +33,7 @@ class EQ(Kernel):
         self.N_D = N_D
         self.N_feat = N_feat
         
-    def computePhi(self,coords):
+    def computePhi(self,coords): #deprecated
         """
         ComputePhi (posterior matrix of basis vectors)
         Arguments:
@@ -44,8 +44,16 @@ class EQ(Kernel):
         norm = 1./np.sqrt(self.N_feat)
         c=np.sqrt(2.0)/(self.l2)
         phiMatrix = norm*np.sqrt(2*self.sigma2)*np.cos(c*(self.W@coords)+ self.b[:,None])
-        phiMatrix = phiMatrix.reshape(N_feat,Nt,Nx,Ny)
+        #phiMatrix = phiMatrix.reshape(self.N_feat,Nt,Nx,Ny)
         return phiMatrix
+        
+    def getPhi(self,coords):
+        assert self.W is not None, "Need to call generateFeatures before computing phi."
+        norm = 1./np.sqrt(self.N_feat)
+        c=np.sqrt(2.0)/(self.l2)
+        for w,b in zip(self.W,self.b):
+            phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
+            yield phi
        
 class SensorModel():
     def __init__(self):
@@ -113,6 +121,15 @@ class Model():
         self.resolution = np.array(resolution)
         self.noise_std = noise_std
         self.sensormodel = sensormodel
+        
+        
+        #coords is a D x (Nt,Nx,Ny) array of locations of the grid vertices.
+        #TODO Maybe write more neatly...
+        tt=np.linspace(0.0,self.boundary[1][0],self.resolution[0])
+        xx=np.linspace(0.0,self.boundary[1][1],self.resolution[1])
+        yy=np.linspace(0.0,self.boundary[1][2],self.resolution[2])
+        self.coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
+        #self.coords=coords.reshape(self.N_D,self.resolution[0]*self.resolution[1]*self.resolution[2])
       
 
         #assert self.X.shape[1]==4, "The X input matrix should be Nx4."
