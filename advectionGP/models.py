@@ -134,7 +134,7 @@ class AdvectionDiffusionModel():
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
             #TODO Make this faster - replacing the sums with matrix operations
-            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy+np.random.normal(0.0,self.noiseSD,1)            
+            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy#+np.random.normal(0.0,self.noiseSD,1)            
         self.ySimulated = obs
         return obs
         

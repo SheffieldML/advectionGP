@@ -103,7 +103,7 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(1.0, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        m = AdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.005)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         source = np.zeros(m.resolution)
@@ -141,7 +141,25 @@ class TestKernels(unittest.TestCase):
 
 
         self.assertLess(np.max(np.abs(calc_usingAdjoint-calc_usingForwardModel)),0.001)
-        self.assertLess(np.max(np.abs(calc_usingAdjoint-calc_usingRegressors)),0.001)        
+        self.assertLess(np.max(np.abs(calc_usingAdjoint-calc_usingRegressors)),0.001)  
+        
+    def testDistribution(self):
+        X = np.array([[17,18,10,10],[7,8,5,5],[10,15,12,15]])
+        y = np.array([np.nan,np.nan,np.nan])
+
+        boundary = ([0,0,0],[20,20,20])
+        k = EQ(2, 2.0)
+        sensors = FixedSensorModel(X,1)
+        m = AdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        X2=np.identity(m.N_feat)
+        y2=np.ones(m.N_feat)
+        varZ, meanZ = m.computeZDistribution(X2,y2)
+        varTest=m.N_feat*(1+1/(m.noiseSD**2))
+        meanTest=m.N_feat*(1/m.noiseSD**2)*1/(1+1/(m.noiseSD**2))
+        self.assertAlmostEqual(1,1)
+        self.assertAlmostEqual(sum(meanZ),meanTest)
+        self.assertAlmostEqual(np.sum(np.linalg.inv(varZ)),varTest)
+        
 
     
 if __name__ == '__main__':
