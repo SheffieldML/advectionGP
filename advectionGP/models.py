@@ -56,6 +56,8 @@ class AdvectionDiffusionModel():
         self.kernel.generateFeatures(self.N_D,N_feat) 
         self.N_feat = N_feat
         
+
+
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         if (dx>=2*self.k_0/self.u): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
@@ -127,11 +129,12 @@ class AdvectionDiffusionModel():
         """
         #TODO Need to write a unit test
         #use self.concentration
-        
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
             #TODO Make this faster - replacing the sums with matrix operations
-            obs[it]=sum(sum(sum(h*self.conc)))*self.dt*self.dx*self.dy+np.random.normal(0.0,self.noiseSD,1)            
+            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy
+            #+np.random.normal(0.0,self.noiseSD,1)            
         self.ySimulated = obs
         return obs
         
@@ -160,28 +163,42 @@ class AdvectionDiffusionModel():
         k_0=self.k_0
         for i in range(1,Nt-1):
     #Corner BCs   
-            v[-i-1,0,0]=v[-i,0,0]-dt*(H[-i,0,0]) # BC at x=0, y=0
-            v[-i-1,Nx-1,Ny-1]=v[-i,Nx-1,Ny-1]-dt*( H[-i,Nx-1,Ny-1]) # BC at x=xmax, y=ymax
-            v[-i-1,0,Ny-1]=v[-i,0,Ny-1]-dt*( H[-i,0,Ny-1]) # BC at x=0, y=ymax
-            v[-i-1,Nx-1,0]=v[-i,Nx-1,0]-dt*( H[-i,Nx-1,0]) # BC at x=xmax, y=0
+            v[-i-1,0,0]=v[-i,0,0]+dt*(H[-i,0,0]) # BC at x=0, y=0
+            v[-i-1,Nx-1,Ny-1]=v[-i,Nx-1,Ny-1]+dt*( H[-i,Nx-1,Ny-1]) # BC at x=xmax, y=ymax
+            v[-i-1,0,Ny-1]=v[-i,0,Ny-1]+dt*( H[-i,0,Ny-1]) # BC at x=0, y=ymax
+            v[-i-1,Nx-1,0]=v[-i,Nx-1,0]+dt*( H[-i,Nx-1,0]) # BC at x=xmax, y=0
 
 
     #Edge BCs   
-            v[-i-1,Nx-1,1:Ny-1]=v[-i,Nx-1,1:Ny-1]-dt*(H[-i,Nx-1,1:Ny-1] +u*(v[-i,Nx-1,2:Ny]-v[-i,Nx-1,0:Ny-2] )/(2*dy) +k_0*(v[-i,Nx-1,2:Ny]-2*v[-i,Nx-1,1:Ny-1]+v[-i,Nx-1,0:Ny-2])/dy2) # BC at x=xmax        
-            v[-i-1,0,1:Ny-1]=v[-i,0,1:Ny-1]-dt*(H[-i,0,1:Ny-1]+u*(v[-i,0,2:Ny]-v[-i,0,0:Ny-2] )/(2*dy) +k_0*(v[-i,0,2:Ny]-2*v[-i,0,1:Ny-1]+v[-i,0,0:Ny-2])/dy2 ) # BC at x=0
+            v[-i-1,Nx-1,1:Ny-1]=v[-i,Nx-1,1:Ny-1]+dt*(H[-i,Nx-1,1:Ny-1] +u*(v[-i,Nx-1,2:Ny]-v[-i,Nx-1,0:Ny-2] )/(2*dy) +k_0*(v[-i,Nx-1,2:Ny]-2*v[-i,Nx-1,1:Ny-1]+v[-i,Nx-1,0:Ny-2])/dy2) # BC at x=xmax        
+            v[-i-1,0,1:Ny-1]=v[-i,0,1:Ny-1]+dt*(H[-i,0,1:Ny-1]+u*(v[-i,0,2:Ny]-v[-i,0,0:Ny-2] )/(2*dy) +k_0*(v[-i,0,2:Ny]-2*v[-i,0,1:Ny-1]+v[-i,0,0:Ny-2])/dy2 ) # BC at x=0
 
-            v[-i-1,1:Nx-1,0]=v[-i,1:Nx-1,0]-dt*(   H[-i,1:Nx-1,0]+u*(v[-i,2:Nx,0]-v[-i,0:Nx-2,0] )/(2*dx) +k_0*(v[-i,2:Nx,0]-2*v[-i,1:Nx-1,0]+v[-i,0:Nx-2,0])/dx2  )# BC at y=0
-            v[-i-1,1:Nx-1,Ny-1]=v[-i,1:Nx-1,Ny-1]-dt*(H[-i,1:Nx-1,Ny-1]+u*(v[-i,2:Nx,Ny-1]-v[-i,0:Nx-2,Ny-1] )/(2*dx)+k_0*(v[-i,2:Nx,Ny-1]-2*v[i,1:Nx-1,Ny-1]+v[-i,0:Nx-2,Ny-1])/dx2) # BC at y=ymax
+            v[-i-1,1:Nx-1,0]=v[-i,1:Nx-1,0]+dt*(   H[-i,1:Nx-1,0]+u*(v[-i,2:Nx,0]-v[-i,0:Nx-2,0] )/(2*dx) +k_0*(v[-i,2:Nx,0]-2*v[-i,1:Nx-1,0]+v[-i,0:Nx-2,0])/dx2  )# BC at y=0
+            v[-i-1,1:Nx-1,Ny-1]=v[-i,1:Nx-1,Ny-1]+dt*(H[-i,1:Nx-1,Ny-1]+u*(v[-i,2:Nx,Ny-1]-v[-i,0:Nx-2,Ny-1] )/(2*dx)+k_0*(v[-i,2:Nx,Ny-1]-2*v[i,1:Nx-1,Ny-1]+v[-i,0:Nx-2,Ny-1])/dx2) # BC at y=ymax
 
     #Internal calculation (not on the boundary)
-            v[-i-1,1:Nx-1,1:Ny-1]=v[-i,1:Nx-1,1:Ny-1] -dt*( H[-i,1:Nx-1,1:Ny-1]+u*(v[-i,2:Nx,1:Ny-1]-v[-i,0:Nx-2,1:Ny-1])/(2*dx) +u*(v[-i,1:Nx-1,2:Ny]-v[-i,1:Nx-1,0:Ny-2] )/(2*dy)+k_0*(v[-i,2:Nx,1:Ny-1]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,0:Nx-2,1:Ny-1])/dx2+k_0*(v[-i,1:Nx-1,2:Ny]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,1:Nx-1,0:Ny-2])/dy2 )
+            v[-i-1,1:Nx-1,1:Ny-1]=v[-i,1:Nx-1,1:Ny-1] +dt*( H[-i,1:Nx-1,1:Ny-1]+u*(v[-i,2:Nx,1:Ny-1]-v[-i,0:Nx-2,1:Ny-1])/(2*dx) +u*(v[-i,1:Nx-1,2:Ny]-v[-i,1:Nx-1,0:Ny-2] )/(2*dy)+k_0*(v[-i,2:Nx,1:Ny-1]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,0:Nx-2,1:Ny-1])/dx2+k_0*(v[-i,1:Nx-1,2:Ny]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,1:Nx-1,0:Ny-2])/dy2 )
         return v
         
     def computeModelRegressors(self):
         """
         """
         #phi * v, --> observations
-        self.X = None
+
+    def computeModelRegressors(self,sensorModel):
+        """
+        """
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
+        X = np.zeros([self.N_feat,len(sensorModel.obsLocs)])
+        for j,H in enumerate(sensorModel.getHs(self)):
+            adj=self.computeAdjoint(H)
+            for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+                X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
+            
+        #phi * v, --> scale
+        return X
+
+    #self.X = None
     
     def computeZDistribution(self,y):
         """
