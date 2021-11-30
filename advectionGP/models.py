@@ -134,8 +134,7 @@ class AdvectionDiffusionModel():
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
             #TODO Make this faster - replacing the sums with matrix operations
-            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy
-            #+np.random.normal(0.0,self.noiseSD,1)            
+            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy+np.random.normal(0.0,self.noiseSD,1)            
         self.ySimulated = obs
         return obs
         
@@ -197,9 +196,12 @@ class AdvectionDiffusionModel():
 
     #self.X = None
     
-    def computeZDistribution(self,y):
+    def computeZDistribution(self,X,y):
         """
         """
         #uses self.X and observations y.
-        self.zMean = None
-        self.zCov = None
+        
+        SS = (1./(self.noiseSD**2))*(X@X.T) +np.eye(self.N_feat)
+        varZ =SSinv= np.linalg.inv(SS)
+        meanZ=(1./(self.noiseSD**2))*(SSinv @X@y) #sum_cc.flatten())
+        return varZ, meanZ
