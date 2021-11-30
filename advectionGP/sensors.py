@@ -32,7 +32,7 @@ class FixedSensorModel(SensorModel):
             
         """
         halfGridTile = np.array([0,self.spatialAveraging/2,self.spatialAveraging/2])
-        print(self.obsLocs[:,[0,2,3]]-halfGridTile)
+        #print(self.obsLocs[:,[0,2,3]]-halfGridTile)
         startOfHs = model.getGridCoord(self.obsLocs[:,[0,2,3]]-halfGridTile)
         endOfHs = model.getGridCoord(self.obsLocs[:,[1,2,3]]+halfGridTile)
         
@@ -46,7 +46,7 @@ class FixedSensorModel(SensorModel):
             h = np.zeros(model.resolution)
             h[start[0]:end[0],start[1]:end[1],start[2]:end[2]] = 1/(self.spatialAveraging**2 * tlength)
             #h /= np.sum(h)
-            print(start[0],end[0],start[1],end[1],start[2],end[2])
+            #print(start[0],end[0],start[1],end[1],start[2],end[2])
             yield h
         
 #X = an N by 4 matrix of sensor times and locations [time_start, time_end, x, y]

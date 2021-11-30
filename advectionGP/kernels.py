@@ -36,9 +36,18 @@ class EQ(Kernel):
  
     def getPhi(self,coords):
         assert self.W is not None, "Need to call generateFeatures before computing phi."
+        print("getPhi!")
         norm = 1./np.sqrt(self.N_feat)
         #c=np.sqrt(2.0)/(self.l2)
         c=1/(self.l2)
         for w,b in zip(self.W,self.b):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
             yield phi
+            
+    def getPhiFast(self,coords):
+        assert self.W is not None, "Need to call generateFeatures before computing phi."
+        norm = 1./np.sqrt(self.N_feat)
+        c=1/(self.l2)
+        for i in range(len(self.W)):
+            phi = norm*np.sqrt(2*self.sigma2)*tf.math.cos(np.transpose(c*m.coords,axes=[1,2,3,0])@k.W[i,:]+ self.b[i])
+            yield phi            

@@ -127,6 +127,7 @@ class AdvectionDiffusionModel():
         """       
         Using the forward model      
         """
+        
         #TODO Need to write a unit test
         #use self.concentration
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
@@ -140,15 +141,15 @@ class AdvectionDiffusionModel():
         
      
         
-    #def computeSourceFromPhi(self,z):
-    #    """
-    #    uses self.phi and z to compute         
-    #    """
-    #    self.source = np.zeros(self.resolution) 
-    #    for i,phi in enumerate(self.kernel.getPhi()):
-    #        self.source += phi*z[i]
-    #    
-    #    return self.source
+    def computeSourceFromPhi(self,z):
+        """
+        uses self.phi and z to compute         
+        """
+        self.source = np.zeros(self.resolution) 
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+            self.source += phi*z[i]
+        
+        return self.source
         
     def computeAdjoint(self,H):
         """
@@ -161,7 +162,7 @@ class AdvectionDiffusionModel():
         v[-1,:,:]=0.0
         u=self.u
         k_0=self.k_0
-        for i in range(1,Nt-1):
+        for i in range(1,Nt): #TODO might be better to rewrite as range(Nt-1,1,-1)...
     #Corner BCs   
             v[-i-1,0,0]=v[-i,0,0]+dt*(H[-i,0,0]) # BC at x=0, y=0
             v[-i-1,Nx-1,Ny-1]=v[-i,Nx-1,Ny-1]+dt*( H[-i,Nx-1,Ny-1]) # BC at x=xmax, y=ymax
@@ -179,18 +180,14 @@ class AdvectionDiffusionModel():
     #Internal calculation (not on the boundary)
             v[-i-1,1:Nx-1,1:Ny-1]=v[-i,1:Nx-1,1:Ny-1] +dt*( H[-i,1:Nx-1,1:Ny-1]+u*(v[-i,2:Nx,1:Ny-1]-v[-i,0:Nx-2,1:Ny-1])/(2*dx) +u*(v[-i,1:Nx-1,2:Ny]-v[-i,1:Nx-1,0:Ny-2] )/(2*dy)+k_0*(v[-i,2:Nx,1:Ny-1]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,0:Nx-2,1:Ny-1])/dx2+k_0*(v[-i,1:Nx-1,2:Ny]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,1:Nx-1,0:Ny-2])/dy2 )
         return v
-        
+
+
     def computeModelRegressors(self):
         """
         """
-        #phi * v, --> observations
-
-    def computeModelRegressors(self,sensorModel):
-        """
-        """
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
-        X = np.zeros([self.N_feat,len(sensorModel.obsLocs)])
-        for j,H in enumerate(sensorModel.getHs(self)):
+        X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
+        for j,H in enumerate(self.sensormodel.getHs(self)):
             adj=self.computeAdjoint(H)
             for i,phi in enumerate(self.kernel.getPhi(self.coords)):
                 X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
