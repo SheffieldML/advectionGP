@@ -19,4 +19,15 @@ So you can now import this in a python script anywhere you happen to be (no need
 from advectionGP.models import AdjointAdvectionDiffusionModel as adjModel
 ```
 
+## If you already have the repo on your computer...
+
+Go to the location.
+```
+cd advectionGP 
+```
+Then call:
+```
+pip install -e .
+```
+
 Enjoy!
