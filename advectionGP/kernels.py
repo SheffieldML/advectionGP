@@ -23,7 +23,8 @@ class EQ(Kernel):
                 
     def generateFeatures(self,N_D,N_feat):
         """
-        Create a random basis for the kernel.
+        Create a random basis for the kernel sampled from the normal distribution.
+        Here W is a list of weights for the t,x and y dimentions and b is a linear addition.
         Arguments:
             N_D = number of dimensions
             N_feat = number of features
@@ -35,6 +36,13 @@ class EQ(Kernel):
         
  
     def getPhi(self,coords):
+        """
+        Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+            
+        CURRENTLY NOT USED
+        """
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
         #c=np.sqrt(2.0)/(self.l2)
@@ -44,6 +52,11 @@ class EQ(Kernel):
             yield phi
             
     def getPhiFast(self,coords):
+        """
+        Yields N_feat (Nt,Nx,Ny) phi matrices using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+        """
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
         c=1/(self.l2)

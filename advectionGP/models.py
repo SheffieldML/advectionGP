@@ -63,6 +63,18 @@ class AdvectionDiffusionModel():
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
         
     def getGridStepSize(self):
+        """
+        Calculates useful scalars for the PDE model
+        outputs:
+            dt: time grid size
+            dx: x direction grid size
+            dy: y direction grid size
+            dx2 = dx**2
+            dy2 = dy**2
+            Nt: Number of evaluation points in time
+            Nx: Number of evaluation points in x axis
+            Ny: Number of evaluation points in y axis
+        """
         dt=(self.boundary[1][0]-self.boundary[0][0])/self.resolution[0]
         dx=(self.boundary[1][1]-self.boundary[0][1])/self.resolution[1]
         dy=(self.boundary[1][2]-self.boundary[0][2])/self.resolution[2]
@@ -76,6 +88,9 @@ class AdvectionDiffusionModel():
     def getGridCoord(self,realPos):
         """
         Gets the location on the mesh for a real position
+        I.e. Given a valume in m getGridCoord returns the location on the grid
+        
+        todo: assertion for out of bounds value
         """
         return np.floor(self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])).astype(int)
         
@@ -122,7 +137,9 @@ class AdvectionDiffusionModel():
       
     def computeObservations(self,addNoise='FALSE'):
         """       
-        Using the forward model      
+        Generates test observations by calculating the inner product of the filter function from the senor model and a given self.conc.
+        Arguments:
+            addNoise: if addNoise='TRUE' then random noise is added to the observations from a normal distribution with mean 0 and standard deviation noiseSD. 
         """
         
         #TODO Need to write a unit test
@@ -141,7 +158,7 @@ class AdvectionDiffusionModel():
         
     def computeSourceFromPhi(self,z):
         """
-        uses self.phi and z to compute         
+        uses getPhi from the kernel and a given z vector to generate a source function     
         """
         self.source = np.zeros(self.resolution) 
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
@@ -158,8 +175,9 @@ class AdvectionDiffusionModel():
 class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
     def computeAdjoint(self,H):
         """
-        Gets called for an observation (H).
-        (v is the result of the adjoint operation - sort of think of it like an impulse response)
+        Runs the backward PDE (adjoint problem)
+        Gets called for an observation instance (H).
+        (v is the result of the adjoint operation)
         """
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
 
@@ -189,6 +207,8 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
 
     def computeModelRegressors(self):
         """
+        Computes the regressor matrix X, using getHs from the senor model and getPhi from the kernel.
+        X here is used to infer the distribution of z (and hence the source)
         """
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
@@ -203,6 +223,9 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
     
     def computeZDistribution(self,y):
         """
+        Computes the z distribution using the regressor matrix and a vector of observations
+        Arguments:
+            y: a vector of observations (either generated using compute observations of given by the user in the real data case)
         """
         #uses self.X and observations y.
         
