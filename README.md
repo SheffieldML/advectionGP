@@ -21,9 +21,9 @@ from advectionGP.models import AdjointAdvectionDiffusionModel as adjModel
 
 ## If you already have the repo on your computer...
 
-Go to the location.
+Go to the location. E.g.
 ```
-cd advectionGP 
+cd /home/me/Documents/code/advectionGP 
 ```
 Then call:
 ```
