@@ -62,8 +62,6 @@ class AdvectionDiffusionModel():
         if (dx>=2*self.k_0/self.u): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
         
-        
-        
     def getGridStepSize(self):
         dt=(self.boundary[1][0]-self.boundary[0][0])/self.resolution[0]
         dx=(self.boundary[1][1]-self.boundary[0][1])/self.resolution[1]
@@ -74,7 +72,6 @@ class AdvectionDiffusionModel():
         Nx=self.resolution[1]
         Ny=self.resolution[2]
         return dt,dx,dy,dx2,dy2,Nt,Nx,Ny
-        
         
     def getGridCoord(self,realPos):
         """
@@ -129,7 +126,7 @@ class AdvectionDiffusionModel():
         """
         
         #TODO Need to write a unit test
-        #use self.concentration
+        #use self.conc
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
@@ -149,7 +146,14 @@ class AdvectionDiffusionModel():
             self.source += phi*z[i]
         
         return self.source
-        
+
+
+
+
+
+
+
+class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
     def computeAdjoint(self,H):
         """
         Gets called for an observation (H).
@@ -192,16 +196,45 @@ class AdvectionDiffusionModel():
                 X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
             
         #phi * v, --> scale
+        self.X = X
         return X
-
-    #self.X = None
     
-    def computeZDistribution(self,X,y):
+    def computeZDistribution(self,y):
         """
         """
         #uses self.X and observations y.
         
-        SS = (1./(self.noiseSD**2))*(X@X.T) +np.eye(self.N_feat)
-        varZ =SSinv= np.linalg.inv(SS)
-        meanZ=(1./(self.noiseSD**2))*(SSinv @X@y) #sum_cc.flatten())
-        return varZ, meanZ
+        SS = (1./(self.noiseSD**2))*(self.X@self.X.T) +np.eye(self.N_feat)
+        covZ =SSinv= np.linalg.inv(SS)
+        meanZ=(1./(self.noiseSD**2))*(SSinv @self.X@y) #sum_cc.flatten())
+        return meanZ, covZ
+        
+        
+        
+        
+        
+        
+        
+        
+class MCMCAdvectionDiffusionModel(AdvectionDiffusionModel):
+    def computeLikelihood(self,pred_y,act_y):
+        #compute how likely act_y is given our predictions in pred_y.
+        pass
+        
+    def computeZDistribution(self,y):
+        """
+        """
+        #uses self.X and observations y.
+      
+        z = np.random.randn(self.N_feat)
+        
+        #do MCMC looping here?
+        source = self.computeSourceFromPhi(z)
+        self.computeConcentration(source)
+        pred_y = self.computeObservations()
+        p = self.computeLikelihood(pred_y,y)
+        #do MCMC decision stuff...?
+        #return samples of z, or np.mean(z,1),np.cov(z,1) ##???!
+        #return meanZ, covZ
+        return np.zeros_like(z), np.eye(len(z))
+

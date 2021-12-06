@@ -36,7 +36,6 @@ class EQ(Kernel):
  
     def getPhi(self,coords):
         assert self.W is not None, "Need to call generateFeatures before computing phi."
-        print("getPhi!")
         norm = 1./np.sqrt(self.N_feat)
         #c=np.sqrt(2.0)/(self.l2)
         c=1/(self.l2)
