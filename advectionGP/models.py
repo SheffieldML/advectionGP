@@ -120,7 +120,7 @@ class AdvectionDiffusionModel():
       
       
       
-    def computeObservations(self):
+    def computeObservations(self,addNoise='FALSE'):
         """       
         Using the forward model      
         """
@@ -131,7 +131,9 @@ class AdvectionDiffusionModel():
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
             #TODO Make this faster - replacing the sums with matrix operations
-            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy#+np.random.normal(0.0,self.noiseSD,1)            
+            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy
+            if addNoise=='TRUE':
+                obs[it]+=np.random.normal(0.0,self.noiseSD,1)  
         self.ySimulated = obs
         return obs
         
