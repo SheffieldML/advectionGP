@@ -210,11 +210,22 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         """
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
+        
+        adjs = []
+        print("Calculating Adjoints...")
         for j,H in enumerate(self.sensormodel.getHs(self)):
-            adj=self.computeAdjoint(H)
-            for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-                X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
+            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            adjs.append(self.computeAdjoint(H))
+        print("");
+        #this will run out of memory...
+        print("Calculating Phis...")
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            for j,adj in enumerate(adjs):
             
+            
+                X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
+        print("");
         #phi * v, --> scale
         self.X = X
         return X
