@@ -1,8 +1,6 @@
-from advectionGP.models import AdvectionDiffusionModel
+from advectionGP.models import AdjointAdvectionDiffusionModel
 from advectionGP.sensors import FixedSensorModel
 from advectionGP.kernels import EQ
-
-import numpy as np
 
 import numpy as np
 import unittest
@@ -20,7 +18,7 @@ class TestKernels(unittest.TestCase):
         k = EQ(3.0, 2.0)
         
         sensors = FixedSensorModel(X,2)
-        m = AdvectionDiffusionModel(resolution=[40,4,4],boundary=boundary,N_feat=10000,noiseSD=5.0,kernel=k,sensormodel=sensors)
+        m = AdjointAdvectionDiffusionModel(resolution=[40,4,4],boundary=boundary,N_feat=10000,noiseSD=5.0,kernel=k,sensormodel=sensors)
 
         Phi = np.zeros(np.r_[m.N_feat,m.resolution])
         for i,phi in enumerate(m.kernel.getPhi(m.coords)):
@@ -47,7 +45,7 @@ class TestKernels(unittest.TestCase):
         k = EQ(1.0, 2.0)
 
         sensors = FixedSensorModel(X,2)
-        m = AdvectionDiffusionModel(resolution=[200,200,200],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors)
+        m = AdjointAdvectionDiffusionModel(resolution=[200,200,200],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors)
 
         volume_of_grid_tile = np.prod((np.array(boundary[1])-np.array(boundary[0]))/m.resolution)
         
@@ -70,7 +68,7 @@ class TestKernels(unittest.TestCase):
         sensors = FixedSensorModel(X,2)#not used
         
         #given the advection and diffusion parameters, we can compute the expected Gaussian pollution after the 20s.
-        m = AdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.09,k_0=0.01)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.09,k_0=0.01)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         
@@ -115,7 +113,7 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(1.0, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.005)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.005)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         source = np.zeros(m.resolution)
@@ -135,7 +133,7 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(2, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
 
@@ -168,15 +166,16 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(2, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
-        X2=np.identity(m.N_feat)
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        m.X=np.identity(m.N_feat)
         y2=np.ones(m.N_feat)
-        varZ, meanZ = m.computeZDistribution(X2,y2)
+        
+        meanZ, covZ = m.computeZDistribution(y2)
         varTest=m.N_feat*(1+1/(m.noiseSD**2))
         meanTest=m.N_feat*(1/m.noiseSD**2)*1/(1+1/(m.noiseSD**2))
         self.assertAlmostEqual(1,1)
-        self.assertAlmostEqual(sum(meanZ),meanTest)
-        self.assertAlmostEqual(np.sum(np.linalg.inv(varZ)),varTest)
+        self.assertAlmostEqual(np.sum(meanZ),meanTest)
+        self.assertAlmostEqual(np.sum(np.linalg.inv(covZ)),varTest)
         
 
     

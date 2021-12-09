@@ -45,21 +45,26 @@ class EQ(Kernel):
         """
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
+        
+        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
+        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
         #c=np.sqrt(2.0)/(self.l2)
         c=1/(self.l2)
         for w,b in zip(self.W,self.b):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
             yield phi
             
-    def getPhiFast(self,coords):
-        """
-        Yields N_feat (Nt,Nx,Ny) phi matrices using features from generateFeatures 
-        Arguments:
-            coords: map of all (t,x,y) points in the grid
-        """
-        assert self.W is not None, "Need to call generateFeatures before computing phi."
-        norm = 1./np.sqrt(self.N_feat)
-        c=1/(self.l2)
-        for i in range(len(self.W)):
-            phi = norm*np.sqrt(2*self.sigma2)*tf.math.cos(np.transpose(c*m.coords,axes=[1,2,3,0])@k.W[i,:]+ self.b[i])
-            yield phi            
+    #earlier experiment thinking that einsum would be slow. To delete.
+    #def getPhiFast(self,coords):
+    #    """
+    #    Yields N_feat (Nt,Nx,Ny) phi matrices using features from generateFeatures 
+    #    Arguments:
+    #        coords: map of all (t,x,y) points in the grid
+    #    """
+    #    assert self.W is not None, "Need to call generateFeatures before computing phi."
+    #    norm = 1./np.sqrt(self.N_feat)
+    #    #c=1/(self.l2)
+    #    c=np.sqrt(2.0)/(self.l2)
+    #    for i in range(len(self.W)):
+    #        phi = norm*np.sqrt(2*self.sigma2)*tf.math.cos(np.transpose(c*m.coords,axes=[1,2,3,0])@k.W[i,:]+ self.b[i])
+    #        yield phi

@@ -26,9 +26,7 @@ class AdvectionDiffusionModel():
         assert self.N_D==len(boundary[0]), "The dimensions in the boundary don't match those in the grid resolution"
         assert self.N_D==len(boundary[1]), "The dimensions in the boundary don't match those in the grid resolution"
 
-        #self.spatial_averaging = spatial_averaging
-        #self.X = X
-        #self.y = y
+
         self.boundary = [np.array(boundary[0]),np.array(boundary[1])]
         self.resolution = np.array(resolution)
         self.noiseSD = noiseSD
@@ -246,7 +244,7 @@ class MCMCAdvectionDiffusionModel(AdvectionDiffusionModel):
         #compute how likely act_y is given our predictions in pred_y.
         pass
         
-    def computeZDistribution(self,y):
+    def computeZDistribution(self):
         """
         """
         #uses self.X and observations y.
