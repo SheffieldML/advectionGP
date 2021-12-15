@@ -244,7 +244,24 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         return meanZ, covZ
         
         
+    def computeSourceDistribution(self,meanZ,covZ):
+        """
+        Computes the S distribution (at each grid point) using the previously inferred mean and covariance of z. Does not compute joint distribution due to required size of covariance matrix
+        Arguments:
+            meanZ: an Nfeat long vector inferred using computeZDistribution
+            covZ: an Nfeat x Nfeat matrix inferred using computeZDistribution
+        """
+        #uses self.X and observations y.
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         
+        meanSource = self.computeSourceFromPhi(meanZ)
+        varSource = np.zeros((Nt,Nx,Ny))
+        for i,phii in enumerate(self.kernel.getPhi(self.coords)):
+            for j,phij in enumerate(self.kernel.getPhi(self.coords)):
+                varSource += covZ[i,j]*phii*phij
+        
+        
+        return meanSource, varSource    
         
         
         

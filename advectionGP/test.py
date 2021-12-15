@@ -177,6 +177,57 @@ class TestKernels(unittest.TestCase):
         self.assertAlmostEqual(np.sum(meanZ),meanTest)
         self.assertAlmostEqual(np.sum(np.linalg.inv(covZ)),varTest)
         
+    def testSourceDistribution(self):
+        """
+        Tests the variance of the source calculated by computeSourceDistribution
+        """
+        # generate sensor locations with shape [total observations, 4], where each row has elements 
+        #[lower time location, upper time location, x location, y location]
+
+        tlocL = np.linspace(2,15,1) # lower time
+        xloc=np.linspace(5,15,2) # x locations
+        yloc=np.linspace(5,15,2) # y locations
+        sensN = len(xloc)*len(yloc) # total number of sensors 
+        obsN = len(tlocL) # total time points at which an observation is taken
+        X= np.zeros((obsN*sensN,4)) # obsN*sensN is total observations over all sensors and all times
+        # Build sensor locations
+        X[:,0] = np.asarray(np.meshgrid(tlocL,xloc,yloc)).reshape(3,sensN*obsN)[0] 
+        X[:,2] = np.asarray(np.meshgrid(tlocL,xloc,yloc)).reshape(3,sensN*obsN)[1]
+        X[:,3] = np.asarray(np.meshgrid(tlocL,xloc,yloc)).reshape(3,sensN*obsN)[2]
+        X[:,1] = X[:,0]+1
+
+        u = 0.0004
+        k_0 = 0.0001
+        noiseSD = 0.05
+
+        N_feat=1000 # number of features used to approximate GP
+        boundary = ([0,0,0],[20,20,20]) # corners of the grid
+        k = EQ(4.0, 2.0) # generate EQ kernel
+        sensors = FixedSensorModel(X,1) # establish sensor model
+        res = [80,40,40]
+        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
+
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize() # useful numbers!
+
+        z=np.random.normal(0,1.0,N_feat) # Generate z to compute test source
+        source=m.computeSourceFromPhi(z) # Compute test source
+        conc=m.computeConcentration(source) # Compute test concentration
+        y= m.computeObservations(addNoise='TRUE') # Compute observations with noise
+        k = EQ(4.0, 2.0) # generate EQ kernel
+        sensors = FixedSensorModel(X,1)
+        N_feat = 50
+        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
+        X1 = m.computeModelRegressors() # Compute regressor matrix
+        meanZ, covZ = m.computeZDistribution(y) # Infers z vector mean and covariance
+        source2 = m.computeSourceFromPhi(meanZ) # Generates estimated source using inferred mean
+        Nsamps = 10
+        results = np.zeros(np.r_[res,Nsamps])
+        for sample_i in range(Nsamps):
+            z = np.random.multivariate_normal(meanZ,covZ)
+            results[:,:,:,sample_i] = m.computeSourceFromPhi(z)
+        meanSource, varSource = m.computeSourceDistribution(meanZ,covZ)
+        self.assertAlmostEqual(np.sum(np.abs(np.sqrt(varSource)-np.std(results,3)))/(Nx*Ny*Nt),0)    
+        
 
     
 if __name__ == '__main__':
