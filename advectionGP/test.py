@@ -173,7 +173,6 @@ class TestKernels(unittest.TestCase):
         meanZ, covZ = m.computeZDistribution(y2)
         varTest=m.N_feat*(1+1/(m.noiseSD**2))
         meanTest=m.N_feat*(1/m.noiseSD**2)*1/(1+1/(m.noiseSD**2))
-        self.assertAlmostEqual(1,1)
         self.assertAlmostEqual(np.sum(meanZ),meanTest)
         self.assertAlmostEqual(np.sum(np.linalg.inv(covZ)),varTest)
         
@@ -215,18 +214,18 @@ class TestKernels(unittest.TestCase):
         y= m.computeObservations(addNoise='TRUE') # Compute observations with noise
         k = EQ(4.0, 2.0) # generate EQ kernel
         sensors = FixedSensorModel(X,1)
-        N_feat = 50
+        N_feat = 10
         m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
         X1 = m.computeModelRegressors() # Compute regressor matrix
         meanZ, covZ = m.computeZDistribution(y) # Infers z vector mean and covariance
         source2 = m.computeSourceFromPhi(meanZ) # Generates estimated source using inferred mean
-        Nsamps = 10
+        Nsamps = 500
         results = np.zeros(np.r_[res,Nsamps])
         for sample_i in range(Nsamps):
             z = np.random.multivariate_normal(meanZ,covZ)
             results[:,:,:,sample_i] = m.computeSourceFromPhi(z)
         meanSource, varSource = m.computeSourceDistribution(meanZ,covZ)
-        self.assertAlmostEqual(np.sum(np.abs(np.sqrt(varSource)-np.std(results,3)))/(Nx*Ny*Nt),0)    
+        self.assertAlmostEqual(np.sum(np.abs(np.sqrt(varSource)-np.std(results,3)))/(Nx*Ny*Nt),0,1)    
         
 
     
