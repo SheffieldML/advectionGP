@@ -66,9 +66,11 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(1.0, 2.0) #not used
         sensors = FixedSensorModel(X,2)#not used
-        
+        u=[]
+        u.append(np.ones([100,100,100])*0.09) #x direction wind
+        u.append(np.ones([100,100,100])*0.09) # y direction wind
         #given the advection and diffusion parameters, we can compute the expected Gaussian pollution after the 20s.
-        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.09,k_0=0.01)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.01)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         
@@ -82,7 +84,7 @@ class TestKernels(unittest.TestCase):
         #compute the predicted analytic solution for an infinitesimal spike of pollution
         x = np.linspace(boundary[0][0],boundary[1][0],Nx)
         t = ((Nt-1)/m.resolution[0])*m.boundary[1][0]
-        new_centre = (m.boundary[1][1]+dx)/2+m.u*t
+        new_centre = (m.boundary[1][1]+dx)/2+np.max(m.u)*t
         c = np.exp(-(x-new_centre)**2/(4*m.k_0*t))
 
         #the height isn't relevant as we have to normalise things anyway.
@@ -113,7 +115,10 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(1.0, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.005)
+        u=[]
+        u.append(np.ones([100,20,20])*0.01) #x direction wind
+        u.append(np.ones([100,20,20])*0.01) # y direction wind
+        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.005)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         source = np.zeros(m.resolution)
@@ -133,7 +138,10 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(2, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        u=[]
+        u.append(np.ones([30,30,30])*0.01) #x direction wind
+        u.append(np.ones([30,30,30])*0.01) # y direction wind
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.05)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
 
@@ -166,7 +174,10 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[20,20,20])
         k = EQ(2, 2.0)
         sensors = FixedSensorModel(X,1)
-        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=0.01,k_0=0.05)
+        u=[]
+        u.append(np.ones([30,30,30])*0.01) #x direction wind
+        u.append(np.ones([30,30,30])*0.01) # y direction wind
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.05)
         m.X=np.identity(m.N_feat)
         y2=np.ones(m.N_feat)
         
@@ -194,8 +205,8 @@ class TestKernels(unittest.TestCase):
         X[:,2] = np.asarray(np.meshgrid(tlocL,xloc,yloc)).reshape(3,sensN*obsN)[1]
         X[:,3] = np.asarray(np.meshgrid(tlocL,xloc,yloc)).reshape(3,sensN*obsN)[2]
         X[:,1] = X[:,0]+1
-
-        u = 0.0004
+        
+        
         k_0 = 0.0001
         noiseSD = 0.05
 
@@ -204,6 +215,9 @@ class TestKernels(unittest.TestCase):
         k = EQ(4.0, 2.0) # generate EQ kernel
         sensors = FixedSensorModel(X,1) # establish sensor model
         res = [80,40,40]
+        u=[]
+        u.append(np.ones(res)*0.0004) #x direction wind
+        u.append(np.ones(res)*0.0004) # y direction wind
         m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize() # useful numbers!
