@@ -43,7 +43,7 @@ class AdvectionDiffusionModel():
       
         #Compute some variables useful for PDEs
         
-        self.u = u
+        self.u = u #advection term: size 2 x resolution grid
         self.k_0 = k_0
 
         
