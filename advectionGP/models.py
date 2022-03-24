@@ -1,7 +1,7 @@
 import numpy as np
          
 class AdvectionDiffusionModel():
-    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,N_feat=25,spatial_averaging=1.0,u=0.001,k_0=0.001):
+    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,N_feat=25,spatial_averaging=1.0,k_0=0.001):
         """
         The Advection Diffusion Model.
         
@@ -31,6 +31,7 @@ class AdvectionDiffusionModel():
         self.resolution = np.array(resolution)
         self.noiseSD = noiseSD
         self.sensormodel = sensormodel
+        self.windmodel = windmodel
         
         
         #coords is a D x (Nt,Nx,Ny) array of locations of the grid vertices.
@@ -43,7 +44,7 @@ class AdvectionDiffusionModel():
       
         #Compute some variables useful for PDEs
         
-        self.u = u #advection term: size 2 x resolution grid
+        self.u = self.windmodel.getu(self) #advection term: size 2 x resolution grid
         self.k_0 = k_0
 
         
