@@ -35,9 +35,9 @@ class AdvectionDiffusionModel():
         
         #coords is a D x (Nt,Nx,Ny) array of locations of the grid vertices.
         #TODO Maybe write more neatly...
-        tt=np.linspace(0.0,self.boundary[1][0],self.resolution[0])
-        xx=np.linspace(0.0,self.boundary[1][1],self.resolution[1])
-        yy=np.linspace(0.0,self.boundary[1][2],self.resolution[2])
+        tt=np.linspace(self.boundary[0][0],self.boundary[1][0],self.resolution[0])
+        xx=np.linspace(self.boundary[0][1],self.boundary[1][1],self.resolution[1])
+        yy=np.linspace(self.boundary[0][2],self.boundary[1][2],self.resolution[2])
         self.coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
         #self.coords=coords.reshape(self.N_D,self.resolution[0]*self.resolution[1]*self.resolution[2])
       
