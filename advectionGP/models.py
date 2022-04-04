@@ -15,8 +15,15 @@ class AdvectionDiffusionModel():
             sensormodel = an instatiation of a SensorModel class that implements the getHs method.
             N_feat = number of fourier features
             spatial_averaging = how big the volume the sensor measures (default 0.001).
-            u = wind speed
+            windmodel = an instance of a Wind class (to build u using)
             k_0 = diffusion constant
+            
+        When using real data (e.g. wind etc) we assume the units are:
+         - km
+         - hours [since 
+         - km/h
+         - pollution can be anything, we assume at the moment PM2.5 in ug/m^3.
+        
         """
         #TODO URGENT: The spatial averaging doesn't make sense!
         #TODO The wind speed and diffusion might need to be vectors
