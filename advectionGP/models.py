@@ -1,7 +1,7 @@
 import numpy as np
          
 class AdvectionDiffusionModel():
-    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,N_feat=25,spatial_averaging=1.0,u=0.001,k_0=0.001):
+    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,N_feat=25,spatial_averaging=1.0,k_0=0.001):
         """
         The Advection Diffusion Model.
         
@@ -15,8 +15,15 @@ class AdvectionDiffusionModel():
             sensormodel = an instatiation of a SensorModel class that implements the getHs method.
             N_feat = number of fourier features
             spatial_averaging = how big the volume the sensor measures (default 0.001).
-            u = wind speed
+            windmodel = an instance of a Wind class (to build u using)
             k_0 = diffusion constant
+            
+        When using real data (e.g. wind etc) we assume the units are:
+         - km
+         - hours [since 
+         - km/h
+         - pollution can be anything, we assume at the moment PM2.5 in ug/m^3.
+        
         """
         #TODO URGENT: The spatial averaging doesn't make sense!
         #TODO The wind speed and diffusion might need to be vectors
@@ -31,6 +38,7 @@ class AdvectionDiffusionModel():
         self.resolution = np.array(resolution)
         self.noiseSD = noiseSD
         self.sensormodel = sensormodel
+        self.windmodel = windmodel
         
         
         #coords is a D x (Nt,Nx,Ny) array of locations of the grid vertices.
@@ -43,7 +51,7 @@ class AdvectionDiffusionModel():
       
         #Compute some variables useful for PDEs
         
-        self.u = u #advection term: size 2 x resolution grid
+        self.u = self.windmodel.getu(self) #advection term: size 2 x resolution grid
         self.k_0 = k_0
 
         
