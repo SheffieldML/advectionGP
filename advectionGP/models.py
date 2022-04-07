@@ -270,7 +270,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         
         
 class AdvectionDiffusionReactionModel(AdvectionDiffusionModel):
-    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,N_feat=25,spatial_averaging=1.0,u=0.001,k_0=0.001,R=0.001):
+    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,N_feat=25,spatial_averaging=1.0,k_0=0.001,R=0.001):
         """
         The Advection Diffusion Reaction Model.
         
@@ -288,7 +288,7 @@ class AdvectionDiffusionReactionModel(AdvectionDiffusionModel):
             k_0 = diffusion constant
             R = reaction constant
         """
-        super().__init__(boundary,resolution,kernel,noiseSD,sensormodel,N_feat,spatial_averaging,u,k_0)        
+        super().__init__(boundary,resolution,kernel,noiseSD,sensormodel,windmodel,N_feat,spatial_averaging,k_0)        
         self.R=R
                 
     def computeConcentration(self,source,enforce_nonnegative=False):
