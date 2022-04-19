@@ -54,6 +54,26 @@ class EQ(Kernel):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
             yield phi
             
+            
+    def getPhi1D(self,coords):
+        """
+        Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+
+        CURRENTLY NOT USED
+        """
+        assert self.W is not None, "Need to call generateFeatures before computing phi."
+        norm = 1./np.sqrt(self.N_feat)
+
+        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
+        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
+        #c=np.sqrt(2.0)/(self.l2)
+        c=1/(self.l2)
+        for w,b in zip(self.W,self.b):
+            phi=norm*np.sqrt(2*self.sigma2)*np.cos((c*w*np.array(coords))+b)
+            yield phi
+            
     #earlier experiment thinking that einsum would be slow. To delete.
     #def getPhiFast(self,coords):
     #    """
