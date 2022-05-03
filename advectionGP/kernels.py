@@ -57,9 +57,9 @@ class EQ(Kernel):
             
     def getPhi1D(self,coords):
         """
-        Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
+        Generates a (N_feat,Nt) matrix of basis vectors using features from generateFeatures 
         Arguments:
-            coords: map of all (t,x,y) points in the grid
+            coords: map of all (t) points in the grid
 
         CURRENTLY NOT USED
         """

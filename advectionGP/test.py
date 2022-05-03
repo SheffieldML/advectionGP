@@ -1,6 +1,8 @@
 from advectionGP.models import AdjointAdvectionDiffusionModel
+from advectionGP.models import AdjointSecondOrderODEModel
 from advectionGP.sensors import FixedSensorModel
 from advectionGP.kernels import EQ
+from advectionGP.wind import WindFixU 
 
 import numpy as np
 import unittest
@@ -16,9 +18,9 @@ class TestKernels(unittest.TestCase):
         boundary = ([0,0,0],[10,10,10])
         
         k = EQ(3.0, 2.0)
-        
+        windmodel=WindFixU(1)
         sensors = FixedSensorModel(X,2)
-        m = AdjointAdvectionDiffusionModel(resolution=[40,4,4],boundary=boundary,N_feat=10000,noiseSD=5.0,kernel=k,sensormodel=sensors)
+        m = AdjointAdvectionDiffusionModel(resolution=[40,4,4],boundary=boundary,windmodel=windmodel,N_feat=10000,noiseSD=5.0,kernel=k,sensormodel=sensors)
 
         Phi = np.zeros(np.r_[m.N_feat,m.resolution])
         for i,phi in enumerate(m.kernel.getPhi(m.coords)):
@@ -40,12 +42,12 @@ class TestKernels(unittest.TestCase):
         """
         X = np.array([[0,10,3,5]])
         y = np.array([12])#unused
-
+        windmodel=WindFixU(1)
         boundary = ([0,0,0],[10,10,10])
         k = EQ(1.0, 2.0)
 
         sensors = FixedSensorModel(X,2)
-        m = AdjointAdvectionDiffusionModel(resolution=[200,200,200],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors)
+        m = AdjointAdvectionDiffusionModel(resolution=[200,200,200],boundary=boundary,windmodel=windmodel,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors)
 
         volume_of_grid_tile = np.prod((np.array(boundary[1])-np.array(boundary[0]))/m.resolution)
         
@@ -55,7 +57,7 @@ class TestKernels(unittest.TestCase):
             
         self.assertAlmostEqual(np.sum(h)*volume_of_grid_tile,1,5,"Integral of h over space and time doesn't equal one.")
        
-    def test_forward_model(self):
+    def test_adv_diff_forward_model(self):
         """
         Tests the calculation of the advection-diffusion PDE with a point source. Pollution distribution has a gaussian shape: http://web.mit.edu/1.061/www/dream/FIVE/FIVETHEORY.PDF
         """
@@ -69,8 +71,9 @@ class TestKernels(unittest.TestCase):
         u=[]
         u.append(np.ones([100,100,100])*0.09) #x direction wind
         u.append(np.ones([100,100,100])*0.09) # y direction wind
+        windmodel=WindFixU(u)
         #given the advection and diffusion parameters, we can compute the expected Gaussian pollution after the 20s.
-        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.01)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=15,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.01)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         
@@ -104,8 +107,41 @@ class TestKernels(unittest.TestCase):
         
         #and not change during diffusion
         self.assertAlmostEqual(np.sum(estimated_concentration[2,:,:])/dt,1)
+        
+        
+    def test_second_order_ODE_forward_model(self):
+        """
+        Tests the calculation of the second order ODE model with a constant source (=1) and fixed k_0=-0.5, u=1, eta=5. Solution distribution can be solved using variation of parameters method
+        """
+
+        tlocL = np.linspace(0,9.9,75) #not used
+        X= np.zeros((len(tlocL),2)) #not used
+        # Build sensor locations
+        X[:,0] = tlocL #not used
+        X[:,1] = X[:,0]+0.1 #not used
+        sensors = FixedSensorModel(X,1) #not used
+        k_0 = -0.5 #p1
+        u=1 #p2
+        eta=5 #p3
+        noiseSD = 0.05 #not used
+        N_feat=2000 # not used
+        boundary = ([0],[10])# corners of the grid - in units of space
+        kForward = EQ(0.6, 4.0) # generate EQ kernel arguments are lengthscale and variance
+        res = [100] # grid size for time, x and y
+        m = AdjointSecondOrderODEModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=kForward,sensormodel=sensors,k_0=k_0,u=u,eta=eta) #initiate ODE model to build concentration
+
+        dt,dt2,Nt = m.getGridStepSize() # useful numbers!
+        sourceGT = np.ones(m.resolution) # set constant source
+        estimated_concentration=m.computeConcentration(sourceGT) # Compute concentration - runs ODE forward model
+
+        #compute the predicted analytic solution for a constant source
+        analytic = -(0.2/3)*np.exp(-m.coords)*np.sin(3*m.coords)-0.2*np.exp(-m.coords)*np.cos(3*m.coords)+0.2
+        
+        largest_error = np.max(np.abs(estimated_concentration[:,None]-analytic)) # calculate largest error between the estimated and analytic
+        
+        self.assertLess(largest_error,0.1,"Estimated concentration field does not match analytic solution")
     
-    def testAdjoint(self):
+    def testAdvDiffAdjoint(self):
         """
         Tests the calculation of the adjoint problem by using <c,h> = <f,v> where c=concentration field, h=filter function, f=source and v=adjoint solution
         """
@@ -118,7 +154,8 @@ class TestKernels(unittest.TestCase):
         u=[]
         u.append(np.ones([100,20,20])*0.01) #x direction wind
         u.append(np.ones([100,20,20])*0.01) # y direction wind
-        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.005)
+        windmodel=WindFixU(u)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.005)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         source = np.zeros(m.resolution)
@@ -127,7 +164,38 @@ class TestKernels(unittest.TestCase):
         v = m.computeAdjoint(list(sensors.getHs(m))[0])
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         self.assertAlmostEqual(np.sum(v*source)*dt*dx*dy,m.computeObservations()[0])
-    
+        
+        
+    def testSecondOrderODEAdjoint(self):
+            """
+            Tests the calculation of the adjoint problem by using <c,h> = <f,v> where c=concentration field, h=filter function, f=source and v=adjoint solution
+            """
+            tlocL=np.linspace(5,5,1)
+            X= np.zeros((len(tlocL),2)) #obs matrix
+            # Build sensor locations
+            X[:,0] = tlocL # lower bound for obs
+            X[:,1] = X[:,0]+0.1 # upper bound
+            sensors = FixedSensorModel(X,1) # sensor model
+            k_0 = -0.5 #p1
+            u=1 #p2
+            eta=5 #p3
+            noiseSD = 0.05 
+            N_feat=2000 
+            boundary = ([0],[10])# corners of the grid - in units of space
+            kForward = EQ(0.6, 4.0) # generate EQ kernel arguments are lengthscale and variance
+            res = [1000] # grid size for time, x and y
+            m = AdjointSecondOrderODEModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=kForward,sensormodel=sensors,k_0=k_0,u=u,eta=eta) #initiate ODE model to build concentration
+
+            dt,dt2,Nt = m.getGridStepSize() # useful numbers!
+            #source = np.ones(m.resolution) # set constant source
+            z=np.random.normal(0,1.0,N_feat) # Generate z to compute source
+            source=m.computeSourceFromPhi(z)# Compute ground truth source by approximating GP
+            estimated_concentration=m.computeConcentration(source) # Compute concentration - runs ODE forward model
+
+            v = m.computeAdjoint(list(sensors.getHs1D(m))[0])
+            dt,dt2,Nt = m.getGridStepSize()
+            self.assertAlmostEqual((np.sum(v*source)*dt)[0],np.array(m.computeObservations())[0])
+
     def testRegressor(self):
         """
         Checks the calculation of the regressor matrix by comparing it to results from the adjoint model and the forward model (<c,h> = <f,v>  = X.Tz) (X regressor matrix, z vector that defines the source function)
@@ -141,7 +209,8 @@ class TestKernels(unittest.TestCase):
         u=[]
         u.append(np.ones([30,30,30])*0.01) #x direction wind
         u.append(np.ones([30,30,30])*0.01) # y direction wind
-        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.05)
+        windmodel=WindFixU(u)
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=100,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.05)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
 
@@ -177,7 +246,8 @@ class TestKernels(unittest.TestCase):
         u=[]
         u.append(np.ones([30,30,30])*0.01) #x direction wind
         u.append(np.ones([30,30,30])*0.01) # y direction wind
-        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,u=u,k_0=0.05)
+        windmodel=WindFixU(u)
+        m = AdjointAdvectionDiffusionModel(resolution=[30,30,30],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.05)
         m.X=np.identity(m.N_feat)
         y2=np.ones(m.N_feat)
         
@@ -218,7 +288,8 @@ class TestKernels(unittest.TestCase):
         u=[]
         u.append(np.ones(res)*0.0004) #x direction wind
         u.append(np.ones(res)*0.0004) # y direction wind
-        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
+        windmodel=WindFixU(u)
+        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=k_0) #initiate PDE model
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize() # useful numbers!
 
@@ -229,7 +300,7 @@ class TestKernels(unittest.TestCase):
         k = EQ(4.0, 2.0) # generate EQ kernel
         sensors = FixedSensorModel(X,1)
         N_feat = 10
-        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,u=u,k_0=k_0) #initiate PDE model
+        m = AdjointAdvectionDiffusionModel(resolution=res,boundary=boundary,N_feat=N_feat,noiseSD=noiseSD,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=k_0) #initiate PDE model
         X1 = m.computeModelRegressors() # Compute regressor matrix
         meanZ, covZ = m.computeZDistribution(y) # Infers z vector mean and covariance
         source2 = m.computeSourceFromPhi(meanZ) # Generates estimated source using inferred mean

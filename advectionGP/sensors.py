@@ -52,7 +52,7 @@ class FixedSensorModel(SensorModel):
             
     def getHs1D(self,model):
             """
-            Returns an interator providing indicator matrices for each observation.
+            Returns an iterator providing indicator matrices for each observation on a 1D grid.
             Should integrate to one over the `actual' space (but not necessarily over the grid).
             Arguments:
                 model == is a model object (provides grid resolution etc)
@@ -60,9 +60,9 @@ class FixedSensorModel(SensorModel):
             """
             
             #print(self.obsLocs[:,[0,2,3]]-halfGridTile)
-            startOfHs = model.getGridCoord(self.obsLocs[:,[0]])
-            endOfHs = model.getGridCoord(self.obsLocs[:,[1]])
-
+            startOfHs = model.getGridCoord(self.obsLocs[:,[0]]) # start of observation ranges
+            endOfHs = model.getGridCoord(self.obsLocs[:,[1]]) # end of observartion ranges
+            
             endOfHs[endOfHs==startOfHs]+=1 #TODO Improve this to ensure we enclose the sensor volume better with our grid.
 
             assert (np.all(startOfHs>=0)) & (np.all(startOfHs<=model.resolution)), "Observation cell isn't inside the grid."
@@ -71,10 +71,7 @@ class FixedSensorModel(SensorModel):
 
             for start,end,tlength in zip(startOfHs,endOfHs,self.obsLocs[:,1]-self.obsLocs[:,0]):
                 h = np.zeros(model.resolution)
-                h[start[0]:end[0]] = 1/(tlength)
-                print(start[0],end[0],h[start[0]:end[0]])
-                #h /= np.sum(h)
-                #print(start[0],end[0],start[1],end[1],start[2],end[2])
+                h[start[0]:end[0]] = 1/(tlength) 
                 yield h
         
 #X = an N by 4 matrix of sensor times and locations [time_start, time_end, x, y]
