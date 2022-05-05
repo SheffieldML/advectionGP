@@ -20,7 +20,7 @@ class AdvectionDiffusionModel():
             
         When using real data (e.g. wind etc) we assume the units are:
          - km
-         - hours [since 
+         - hours
          - km/h
          - pollution can be anything, we assume at the moment PM2.5 in ug/m^3.
         
@@ -211,7 +211,8 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
     def computeModelRegressors(self):
         """
         Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
-        X here is used to infer the distribution of z (and hence the source)
+        X here is used to infer the distribution of z (and hence the source).
+        X is [features x observations]
         """
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
@@ -227,14 +228,12 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
             print("%d/%d \r" % (i,len(self.kernel.W)),end="")
             for j,adj in enumerate(adjs):
-            
-            
-                X[i,j] = sum((phi*adj*dt*dx*dy).flatten())
+                X[i,j] = np.sum((phi*adj))*dt*dx*dy
         print("");
         #phi * v, --> scale
         self.X = X
         return X
-    
+        
     def computeZDistribution(self,y):
         """
         Computes the z distribution using the regressor matrix and a vector of observations
