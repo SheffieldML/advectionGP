@@ -42,10 +42,11 @@ class FixedSensorModel(SensorModel):
         assert (np.all(endOfHs>=0)) & (np.all(endOfHs<=model.resolution)), "Observation cell isn't inside the grid."
         assert np.all(endOfHs>startOfHs), "Observation cell has zero volume: at least one axis has no length. startOfHs:"+str(startOfHs)+" endOfHs:"+str(endOfHs)
                 
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = model.getGridStepSize()
         for start,end,tlength in zip(startOfHs,endOfHs,self.obsLocs[:,1]-self.obsLocs[:,0]):
             h = np.zeros(model.resolution)
-            h[start[0]:end[0],start[1]:end[1],start[2]:end[2]] = 1/(self.spatialAveraging**2 * tlength)
-            #h /= np.sum(h)
+            h[start[0]:end[0],start[1]:end[1],start[2]:end[2]] = 1#/(self.spatialAveraging**2 * tlength)
+            h /= (np.sum(h)*dt*dx*dy)
             #print(start[0],end[0],start[1],end[1],start[2],end[2])
             yield h
             

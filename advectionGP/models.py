@@ -234,6 +234,8 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         self.X = X
         return X
         
+        
+        
     def computeZDistribution(self,y):
         """
         Computes the z distribution using the regressor matrix and a vector of observations
