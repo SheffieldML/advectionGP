@@ -5,6 +5,12 @@ class Wind():
     def __init__(self):
         raise NotImplementedError
     
+    def getwind(self,coords):
+        """
+        Returns the wind at given times and places, pass it Nx3 array [time,x,y].
+        """
+        raise NotImplementedError
+        
     def getu(self,model):
         """
         Return u: a list of two matrices (one for x and one for y).
@@ -29,6 +35,13 @@ class WindSimple(Wind):
         self.speedx = speedx
         self.speedy = speedy
 
+    def getwind(self,coords):
+        """
+        Returns the wind at given times and places, pass it [something]x3 array [time,x,y].
+        """
+        #return np.repeat(np.array([self.speedx,self.speedy])[None,:],len(coords),0)
+        return np.repeat(np.array([self.speedx,self.speedy])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+
     def getu(self,model):
         u = []
         u.append(np.full(model.resolution,self.speedx)) #x direction wind
@@ -42,6 +55,12 @@ class WindFixU(Wind):
         u is a list of two matrices (one for x and one for y).
         u needs to be of the the shape: model.resolution."""
         self.u = u
+
+    def getwind(self,coords):
+        """
+        Returns the wind at given times and places, pass it Nx3 array [time,x,y].
+        """
+        raise NotImplementedError        
 
     def getu(self,model):
         #TODO Add exceptions/checks for shape of u.
@@ -65,6 +84,13 @@ class WindFromStations():
         """
         self.stationdata = stationdata
         self.time_avg = time_avg
+        
+    def getwind(self,coords):
+        """
+        Returns the wind at given times and places, pass it Nx3 array [time,x,y].
+        """
+        raise NotImplementedError 
+        
         
     def getu(self,model):
         ux = []
