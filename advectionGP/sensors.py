@@ -37,7 +37,9 @@ class FixedSensorModel(SensorModel):
         endOfHs = model.getGridCoord(self.obsLocs[:,[1,2,3]]+halfGridTile)
         
         endOfHs[endOfHs==startOfHs]+=1 #TODO Improve this to ensure we enclose the sensor volume better with our grid.
-        
+        #print(startOfHs,endOfHs)
+        assert (np.all(self.obsLocs[:,[0,2,3]]-halfGridTile>=model.boundary[0])) & (np.all(self.obsLocs[:,[0,2,3]]-halfGridTile<=model.boundary[1]))
+        assert (np.all(self.obsLocs[:,[1,2,3]]+halfGridTile>=model.boundary[0])) & (np.all(self.obsLocs[:,[1,2,3]]+halfGridTile<=model.boundary[1]))
         assert (np.all(startOfHs>=0)) & (np.all(startOfHs<=model.resolution)), "Observation cell isn't inside the grid."
         assert (np.all(endOfHs>=0)) & (np.all(endOfHs<=model.resolution)), "Observation cell isn't inside the grid."
         assert np.all(endOfHs>startOfHs), "Observation cell has zero volume: at least one axis has no length. startOfHs:"+str(startOfHs)+" endOfHs:"+str(endOfHs)

@@ -97,9 +97,12 @@ class AdvectionDiffusionModel():
         I.e. Given a valume in m getGridCoord returns the location on the grid
         
         todo: assertion for out of bounds value
+        
+        Q: why is this floor and not round?
         """
         return np.floor(self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])).astype(int)
-        
+        #return np.round(self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])).astype(int)
+    
     def computeConcentration(self,source,enforce_nonnegative=False):        
         """
         Computes concentrations.

@@ -145,17 +145,16 @@ class TestKernels(unittest.TestCase):
         """
         Tests the calculation of the adjoint problem by using <c,h> = <f,v> where c=concentration field, h=filter function, f=source and v=adjoint solution
         """
-        X = np.array([[17,18,10,10]])
+        X = np.array([[18,19,19.5,19]])
         y = np.array([12])
-
         boundary = ([0,0,0],[20,20,20])
         k = EQ(1.0, 2.0)
         sensors = FixedSensorModel(X,1)
         u=[]
-        u.append(np.ones([100,20,20])*0.01) #x direction wind
-        u.append(np.ones([100,20,20])*0.01) # y direction wind
+        u.append(np.ones([100,100,100])*0.01) #x direction wind
+        u.append(np.ones([100,100,100])*0.01) # y direction wind
         windmodel=WindFixU(u)
-        m = AdjointAdvectionDiffusionModel(resolution=[100,20,20],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.005)
+        m = AdjointAdvectionDiffusionModel(resolution=[100,100,100],boundary=boundary,N_feat=150,noiseSD=5.0,kernel=k,sensormodel=sensors,windmodel=windmodel,k_0=0.005)
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = m.getGridStepSize()
         source = np.zeros(m.resolution)
