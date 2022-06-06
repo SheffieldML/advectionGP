@@ -144,11 +144,11 @@ class AdvectionDiffusionModel():
         return c
    
       
-    def computeObservations(self,addNoise='FALSE'):
+    def computeObservations(self,addNoise=False):
         """       
         Generates test observations by calculating the inner product of the filter function from the senor model and a given self.conc.
         Arguments:
-            addNoise: if addNoise='TRUE' then random noise is added to the observations from a normal distribution with mean 0 and standard deviation noiseSD. 
+            addNoise: if addNoise is True then random noise is added to the observations from a normal distribution with mean 0 and standard deviation noiseSD. 
         """
         
         #TODO Need to write a unit test
@@ -157,8 +157,8 @@ class AdvectionDiffusionModel():
         obs = np.zeros(len(self.sensormodel.obsLocs))
         for it,h in enumerate(self.sensormodel.getHs(self)):
             #TODO Make this faster - replacing the sums with matrix operations
-            obs[it]=sum(sum(sum(h*self.conc)))*dt*dx*dy
-            if addNoise=='TRUE':
+            obs[it]=np.sum(h*self.conc)*dt*dx*dy
+            if addNoise:
                 obs[it]+=np.random.normal(0.0,self.noiseSD,1)  
         self.ySimulated = obs
         return obs
