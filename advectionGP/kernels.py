@@ -7,7 +7,9 @@ class Kernel():
         assert False, "Not implemented" #TODO Turn into an exception
     def computePhi(self):
         assert False, "Not implemented" #TODO Turn into an exception
-        
+    def getPhiValues(self,particles):
+        assert False, "Not implemented" #TODO Turn into an exception
+
 class EQ(Kernel):
     def __init__(self,l2,sigma2):
         """
@@ -40,8 +42,6 @@ class EQ(Kernel):
         Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
         Arguments:
             coords: map of all (t,x,y) points in the grid
-            
-        CURRENTLY NOT USED
         """
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
@@ -54,14 +54,30 @@ class EQ(Kernel):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
             yield phi
             
-            
+
+    def getPhiValues(self,particles):
+        """
+        Evaluates all features at location of all particles.
+        
+        
+        Nearly a duplicate of getPhi, this returns phi for the locations in particles. 
+        
+        Importantly, particles is of shape N_ObsxN_Particlesx3,
+        (typically N_Obs is the number of observations, N_ParticlesPerObs is the number of particles/observation. 3 is the dimensionality of the space).
+        
+        Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
+        
+        """
+        c=1/(self.l2)
+        norm = 1./np.sqrt(self.N_feat)
+        return norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('ij,lkj',self.W,particles)+self.b[:,None,None])
+
+
     def getPhi1D(self,coords):
         """
         Generates a (N_feat,Nt) matrix of basis vectors using features from generateFeatures 
         Arguments:
             coords: map of all (t) points in the grid
-
-        CURRENTLY NOT USED
         """
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
