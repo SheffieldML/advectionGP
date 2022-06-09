@@ -238,6 +238,63 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         return X
         
         
+        def computeAdjointTest(self,H):
+        """
+        Runs the backward PDE (adjoint problem)
+        Gets called for an observation instance (H).
+        (v is the result of the adjoint operation)
+        """
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
+
+        v=np.zeros(((Nt,Nx,Ny)))
+        v[-1,:,:]=0.0
+        u=self.u
+        k_0=self.k_0
+        for i in range(1,Nt): #TODO might be better to rewrite as range(Nt-1,1,-1)...
+    #Corner BCs   
+            v[-i-1,0,0]= v[-i,0,0] +dt*(H[-i,0,0]-(u[0][-i,0,0]**2)*v[-i,0,0]/k_0-(u[1][-i,0,0]**2)*v[-i,0,0]/k_0+k_0*v[-i,1,0]/dx2-2*k_0*v[-i,0,0]/dx2+k_0*(v[-i,1,0]+2*u[0][-i,0,0]*dx*v[-i,0,0]/k_0)/dx2+k_0*v[-i,0,1]/dy2-2*k_0*v[-i,0,0]/dy2+k_0*(v[-i,0,1]+2*u[0][-i,0,0]*dy*v[-i,0,0]/k_0)/dy2) # BC at x=0, y=0
+            v[-i-1,Nx-1,Ny-1]= v[-i,Nx-1,Ny-1] +dt*(H[-i,Nx-1,Ny-1]-(u[0][-i,Nx-1,Ny-1]**2)*v[-i,Nx-1,Ny-1]/k_0-(u[1][-i,Nx-1,Ny-1]**2)*v[-i,Nx-1,Ny-1]/k_0+k_0*(v[-i,Nx-2,Ny-1]-2*u[0][-i,Nx-1,Ny-1]*dx*v[-i,Nx-1,Ny-1])/dx2-2*k_0*v[-i,Nx-1,Ny-1]/dx2+k_0*v[-i,Nx-2,Ny-1]/dx2+k_0*(v[-i,Nx-1,Ny-2]-2*u[1][-i,Nx-1,Ny-1]*dy*v[-i,Nx-1,Ny-1])/dy2-2*k_0*v[-i,Nx-1,Ny-1]/dy2+k_0*v[-i,Nx-1,Ny-2]/dy2) # BC at x=xmax, y=ymax
+            v[-i-1,0,Ny-1]=v[-i,0,Ny-1]+dt*( H[-i,0,Ny-1]-(u[0][-i,0,Ny-1]**2)*v[-i,0,Ny-1]/k_0-(u[1][-i,0,Ny-1]**2)*v[-i,0,Ny-1]/k_0+k_0*v[-i,1,Ny-1]/dx2-2*k_0*v[-i,0,Ny-1]/dx2+k_0*(v[-i,1,Ny-1]+2*u[0][-i,0,Ny-1]*dx*v[-i,0,Ny-1]/k_0)/dx2+k_0*(v[-i,0,Ny-2]-2*u[1][-i,0,Ny-1]*dy*v[-i,0,Ny-1])/dy2-2*k_0*v[-i,0,Ny-1]/dy2+k_0*v[-i,0,Ny-2]/dy2) # BC at x=0, y=ymax
+            v[-i-1,Nx-1,0]=v[-i,Nx-1,0]+dt*( H[-i,Nx-1,0]-(u[0][-i,Nx-1,0]**2)*v[-i,Nx-1,0]/k_0-(u[1][-i,Nx-1,0]**2)*v[-i,Nx-1,0]/k_0+k_0*(v[-i,Nx-2,0]-2*u[0][-i,Nx-1,0]*dx*v[-i,Nx-1,0])/dx2-2*k_0*v[-i,Nx-1,0]/dx2+k_0*v[-i,Nx-2,0]/dx2+k_0*v[-i,Nx-1,1]/dy2-2*k_0*v[-i,Nx-1,0]/dy2+k_0*(v[-i,Nx-1,1]+2*u[1][-i,Nx-1,0]*dy*v[-i,Nx-1,0]/k_0)/dy2) # BC at x=xmax, y=0
+            
+    #Edge BCs   
+            v[-i-1,Nx-1,1:Ny-1]=v[-i,Nx-1,1:Ny-1]+dt*(H[-i,Nx-1,1:Ny-1] +u[1][-i,Nx-1,1:Ny-1]*(v[-i,Nx-1,2:Ny]-v[-i,Nx-1,0:Ny-2] )/(2*dy) +k_0*(v[-i,Nx-1,2:Ny]-2*v[-i,Nx-1,1:Ny-1]+v[-i,Nx-1,0:Ny-2])/dy2-(u[0][-i,Nx-1,1:Ny-1]**2)*v[-i,Nx-1,1:Ny-1]/k_0+k_0*(v[-i,Nx-2,1:Ny-1]-2*u[0][-i,Nx-1,1:Ny-1]*dx*v[-i,Nx-1,1:Ny-1])/dx2-2*k_0*v[-i,Nx-1,1:Ny-1]/dx2+k_0*v[-i,Nx-2,1:Ny-1]/dx2) # BC at x=xmax        
+            v[-i-1,0,1:Ny-1]=v[-i,0,1:Ny-1]+dt*(H[-i,0,1:Ny-1]+u[1][-i,0,1:Ny-1]*(v[-i,0,2:Ny]-v[-i,0,0:Ny-2] )/(2*dy) +k_0*(v[-i,0,2:Ny]-2*v[-i,0,1:Ny-1]+v[-i,0,0:Ny-2])/dy2 -(u[0][-i,0,1:Ny-1]**2)*v[-i,0,0]/k_0+k_0*v[-i,1,1:Ny-1]/dx2-2*k_0*v[-i,0,1:Ny-1]/dx2+k_0*(v[-i,1,1:Ny-1]+2*u[0][-i,0,1:Ny-1]*dx*v[-i,0,1:Ny-1]/k_0)/dx2) # BC at x=0
+
+            v[-i-1,1:Nx-1,0]=v[-i,1:Nx-1,0]+dt*(H[-i,1:Nx-1,0]+u[0][-i,1:Nx-1,0]*(v[-i,2:Nx,0]-v[-i,0:Nx-2,0] )/(2*dx) +k_0*(v[-i,2:Nx,0]-2*v[-i,1:Nx-1,0]+v[-i,0:Nx-2,0])/dx2 -(u[1][-i,1:Nx-1,0]**2)*v[-i,1:Nx-1,0]/k_0 +k_0*v[-i,1:Nx-1,1]/dy2-2*k_0*v[-i,1:Nx-1,0]/dy2+k_0*(v[-i,1:Nx-1,1]+2*u[1][-i,1:Nx-1,0]*dy*v[-i,1:Nx-1,0]/k_0)/dy2)# BC at y=0
+            v[-i-1,1:Nx-1,Ny-1]=v[-i,1:Nx-1,Ny-1]+dt*(H[-i,1:Nx-1,Ny-1]+u[0][-i,1:Nx-1,Ny-1]*(v[-i,2:Nx,Ny-1]-v[-i,0:Nx-2,Ny-1] )/(2*dx)+k_0*(v[-i,2:Nx,Ny-1]-2*v[i,1:Nx-1,Ny-1]+v[-i,0:Nx-2,Ny-1])/dx2-(u[1][-i,1:Nx-1,Ny-1]**2)*v[-i,1:Nx-1,Ny-1]/k_0+k_0*(v[-i,1:Nx-1,Ny-2]-2*u[1][-i,1:Nx-1,Ny-1]*dy*v[-i,1:Nx-1,Ny-1])/dy2-2*k_0*v[-i,1:Nx-1,Ny-1]/dy2+k_0*v[-i,1:Nx-1,Ny-2]/dy2) # BC at y=ymax
+
+    #Internal calculation (not on the boundary)
+            v[-i-1,1:Nx-1,1:Ny-1]=v[-i,1:Nx-1,1:Ny-1] +dt*( H[-i,1:Nx-1,1:Ny-1]+u[0][-i,1:Nx-1,1:Ny-1]*(v[-i,2:Nx,1:Ny-1]-v[-i,0:Nx-2,1:Ny-1])/(2*dx) +u[1][-i,1:Nx-1,1:Ny-1]*(v[-i,1:Nx-1,2:Ny]-v[-i,1:Nx-1,0:Ny-2] )/(2*dy)+k_0*(v[-i,2:Nx,1:Ny-1]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,0:Nx-2,1:Ny-1])/dx2+k_0*(v[-i,1:Nx-1,2:Ny]-2*v[-i,1:Nx-1,1:Ny-1]  +v[-i,1:Nx-1,0:Ny-2])/dy2 )
+        return v
+
+
+    def computeModelRegressorsTest(self):
+        """
+        Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
+        X here is used to infer the distribution of z (and hence the source).
+        X is [features x observations]
+        """
+        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
+        X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
+        
+        adjs = []
+        print("Calculating Adjoints...")
+        for j,H in enumerate(self.sensormodel.getHs(self)):
+            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            adjs.append(self.computeAdjointTest(H))
+        print("");
+        #this will run out of memory...
+        print("Calculating Phis...")
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            for j,adj in enumerate(adjs):
+                X[i,j] = np.sum((phi*adj))*dt*dx*dy
+        print("");
+        #phi * v, --> scale
+        self.X = X
+        return X
+        
         
     def computeZDistribution(self,y):
         """
