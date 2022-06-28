@@ -23,7 +23,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         N_obs = len(self.sensormodel.obsLocs)
         
         #Place particles at the observations...
+        print("Initialising particles...")
         for obsi in range(N_obs):
+            print("%d/%d \r" % (obsi,N_obs,end="")
             locA = self.sensormodel.obsLocs[obsi,[0,2,3]]
             locB = self.sensormodel.obsLocs[obsi,[1,2,3]]
             newparticles = np.repeat(locA[None,:],Nparticles,0).astype(float)
@@ -32,7 +34,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         particles = np.array(particles)
 
         X = np.zeros([self.N_feat,N_obs])
+        print("Diffusing particles...")
         for nit in range(Nt): 
+            print("%d/%d \r" % (nits,Nt,end="")
             wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
             particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
             particles[:,:,0]-=dt
