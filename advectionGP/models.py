@@ -67,7 +67,7 @@ class AdvectionDiffusionModel():
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         if (dx>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
-        
+
     def getGridStepSize(self):
         """
         Calculates useful scalars for the PDE model
@@ -165,11 +165,17 @@ class AdvectionDiffusionModel():
         
      
         
-    def computeSourceFromPhi(self,z):
+    def computeSourceFromPhi(self,z,coords=None):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
+        set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
+                e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
+        
         """
-        self.source = np.zeros(self.resolution) 
+        if coords is None: coords = self.coords
+        resolution = np.array(coords.shape[1:])
+        self.source = np.zeros(resolution) 
+        
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
             self.source += phi*z[i]
         
