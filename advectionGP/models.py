@@ -65,7 +65,7 @@ class AdvectionDiffusionModel():
 
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
-        if (dx>=2*self.k_0/np.min(self.u)): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
+        if (dx>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
         
     def getGridStepSize(self):
