@@ -47,6 +47,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
                 break
         X = np.array(X)/scale
         self.X = X
+        self.particles = particles
         return X
         
         
