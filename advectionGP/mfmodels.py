@@ -50,18 +50,15 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         self.particles = particles
         return X
         
-    def computeConcentration(self,meanZ,covZ,coords=None,Nsamps=10,Nparticles=30):
+    def computeConcentration(self,meanZ,covZ,Nsamps=10,Nparticles=30):
         """
         meanZ,covZ = mean and covariance of Z.
         Compute the concentration using the particle approach.
-        coords = coordinates to use (default is to use the grid specified in the model
         Nsamps = number of samples to take of Z. If you use just one, it uses the mean.
         Nparticles = number of particles to use
         
         returns mean and variance
         """
-        if coords is not None:
-            self.coords = coords
             
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize() #only bit we use is dt and Nt
 
