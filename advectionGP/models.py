@@ -1,5 +1,16 @@
 import numpy as np
-         
+from scipy.interpolate import griddata
+
+def gethash(z):
+    return hash(z.tobytes())
+        
+def squash(M):
+    if M.shape[0]==3:
+        return M.reshape(M.shape[0],np.prod(M.shape[1:]))
+    if M.shape[-1]==3:
+        return M.reshape(np.prod(M.shape[1:],M.shape[-1]))
+
+
 class AdvectionDiffusionModel():
     def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,N_feat=25,spatial_averaging=1.0,k_0=0.001):
         """
@@ -62,7 +73,7 @@ class AdvectionDiffusionModel():
         self.kernel.generateFeatures(self.N_D,N_feat) 
         self.N_feat = N_feat
         
-
+        self.sourcecache = {}
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
         if (dx>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
@@ -176,10 +187,51 @@ class AdvectionDiffusionModel():
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
         
-        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+        print("Computing Source from Phi...")
+        for i,phi in enumerate(self.kernel.getPhi(coords)):
+            print("%d/%d \r" % (i,self.kernel.N_feat),end="")
             self.source += phi*z[i]
         
         return self.source
+        
+        
+    def computeSourceFromPhiInterpolated(self,z,coords=None):
+        """
+        uses getPhi from the kernel and a given z vector to generate a source function     
+        set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
+                e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
+        
+        """
+        if coords is None: coords = self.coords.transpose([1,2,3,0])
+        
+        zhash = gethash(z)
+        if zhash not in self.sourcecache:
+            print("cache miss, computing source from phi...")
+            source = self.computeSourceFromPhi(z)
+            self.sourcecache[zhash] = source
+        else:
+            print("cache hit")
+            source = self.sourcecache[zhash]
+        
+        gcs = self.getGridCoord(coords)
+        keep = (gcs<source.shape) & (gcs>=0)
+        gcs[~keep]=0 #just set to something that won't break stuff
+        s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
+        s[~np.all(keep,-1)]=0
+        return s
+        
+        
+        #resolution = np.array(coords.shape[1:])
+        #self.source = np.zeros(resolution) 
+        
+        
+        #self.temp = self.coords, source, coords
+        #return self.computeSourceFromPhi(z,coords.transpose([4,0,1,2,3]))
+        
+        #print("Interpolating...")
+        #sourceatcoords = griddata(squash(self.coords).T, source.flatten(), coords, method='linear')
+        #print("Done")
+        #return sourceatcoords
 
 
 
