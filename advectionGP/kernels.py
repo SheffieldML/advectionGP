@@ -51,7 +51,7 @@ class EQ(Kernel):
         #c=np.sqrt(2.0)/(self.l2)
         c=1/(self.l2)
         for w,b in zip(self.W,self.b):
-            phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,ijkl->jkl',w,coords)+ b)
+            phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,i...->...',w,coords)+ b)
             yield phi
             
 

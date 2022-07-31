@@ -50,7 +50,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         self.particles = particles
         return X
         
-    def computeConcentration(self,meanZ,covZ,Nsamps=10,Nparticles=30):
+    def computeConcentration(self,meanZ,covZ,Nsamps=10,Nparticles=30,interpolateSource=False):
         """
         meanZ,covZ = mean and covariance of Z.
         Compute the concentration using the particle approach.
@@ -63,7 +63,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize() #only bit we use is dt and Nt
 
         #meanZ, covZ = self.computeZDistribution(Y) # Infers z vector mean and covariance using regressor matrix
-        sourceInfer = self.computeSourceFromPhi(meanZ) # Generates estimated source using mean of the inferred distribution
+        #sourceInfer = self.computeSourceFromPhi(meanZ) # Generates estimated source using mean of the inferred distribution
         if Nsamps==1:
             Zs = meanZ[None,:]
         else:
@@ -73,7 +73,8 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         print("Initialising particles...")
         particles = self.coords.transpose([1,2,3,0]).copy()
         particles = particles[None,:].repeat(Nparticles,axis=0)
-
+        print("Particle shape:")
+        print(particles.shape)
         conc = np.zeros((Nsamps,)+particles.shape[:4]) #SAMPLING FROM Z
         print("Diffusing particles...")
         for nit in range(Nt):
@@ -84,7 +85,10 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
 
             keep = particles[:,:,:,:,0]>self.boundary[0][0] #could extend to be within grid space
             
-            sources = np.array([self.computeSourceFromPhi(z, particles.transpose([4,0,1,2,3])) for z in Zs])
+            if interpolateSource:
+                sources = np.array([self.computeSourceFromPhiInterpolated(z, particles) for z in Zs])
+            else:
+                sources = np.array([self.computeSourceFromPhi(z, particles.transpose([4,0,1,2,3])) for z in Zs])            
             conc[:,keep] += sources[:,keep] #np.sum(sources)#[:,keep]
             if np.sum(keep)==0: 
                 break
