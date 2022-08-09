@@ -31,6 +31,8 @@ class EQ(Kernel):
             N_D = number of dimensions
             N_feat = number of features
         """
+        if np.isscalar(self.l2):
+            self.l2 = np.repeat(self.l2,N_D)
         self.W = np.random.normal(0,1.0,size=(N_feat,N_D))
         self.b = np.random.uniform(0.,2*np.pi,size=N_feat)
         self.N_D = N_D
@@ -49,9 +51,9 @@ class EQ(Kernel):
         #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
         #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
         #c=np.sqrt(2.0)/(self.l2)
-        c=1/(self.l2)
+        ####c=1/(self.l2)
         for w,b in zip(self.W,self.b):
-            phi=norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('i,i...->...',w,coords)+ b)
+            phi=norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('i,i...->...',w/self.l2,coords)+ b)
             yield phi
             
 
@@ -70,7 +72,7 @@ class EQ(Kernel):
         """
         c=1/(self.l2)
         norm = 1./np.sqrt(self.N_feat)
-        return norm*np.sqrt(2*self.sigma2)*np.cos(c*np.einsum('ij,lkj',self.W,particles)+self.b[:,None,None])
+        return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
 
 
     def getPhi1D(self,coords):
@@ -85,22 +87,8 @@ class EQ(Kernel):
         #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
         #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
         #c=np.sqrt(2.0)/(self.l2)
-        c=1/(self.l2)
+        c=1/self.l2[0]
         for w,b in zip(self.W,self.b):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos((c*w*np.array(coords))+b)
             yield phi
             
-    #earlier experiment thinking that einsum would be slow. To delete.
-    #def getPhiFast(self,coords):
-    #    """
-    #    Yields N_feat (Nt,Nx,Ny) phi matrices using features from generateFeatures 
-    #    Arguments:
-    #        coords: map of all (t,x,y) points in the grid
-    #    """
-    #    assert self.W is not None, "Need to call generateFeatures before computing phi."
-    #    norm = 1./np.sqrt(self.N_feat)
-    #    #c=1/(self.l2)
-    #    c=np.sqrt(2.0)/(self.l2)
-    #    for i in range(len(self.W)):
-    #        phi = norm*np.sqrt(2*self.sigma2)*tf.math.cos(np.transpose(c*m.coords,axes=[1,2,3,0])@k.W[i,:]+ self.b[i])
-    #        yield phi
