@@ -210,7 +210,7 @@ class AdvectionDiffusionModel():
             source = self.computeSourceFromPhi(z)
             self.sourcecache[zhash] = source
         else:
-            print("cache hit")
+            #print("cache hit")
             source = self.sourcecache[zhash]
         
         gcs = self.getGridCoord(coords)
@@ -361,10 +361,13 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
             y: a vector of observations (either generated using compute observations of given by the user in the real data case)
         """
         #uses self.X and observations y.
-        
+        print("Computing SS...",flush=True)
         SS = (1./(self.noiseSD**2))*(self.X@self.X.T) +np.eye(self.N_feat)
+        print("Inverting SS...",flush=True)
         covZ =SSinv= np.linalg.inv(SS)
-        meanZ=(1./(self.noiseSD**2))*(SSinv @self.X@y) #sum_cc.flatten())
+        print("Computing meanZ",flush=True)
+        meanZ=(1./(self.noiseSD**2))*(SSinv@self.X@y) #sum_cc.flatten())
+        print("Done",flush=True)
         return meanZ, covZ
         
         
@@ -736,19 +739,21 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         Computes the regressor matrix X, using getHs1D from the senor model and getPhi1D from the kernel.
         X here is used to infer the distribution of z (and hence the source)
         """
+        print("Getting Grid Step Size",flush=True)
         dt,dt2,Nt = self.getGridStepSize()
+        print("Building X matrix",flush=True)
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
         
         adjs = []
-        print("Calculating Adjoints...")
+        print("Calculating Adjoints...",flush=True)
         for j,H in enumerate(self.sensormodel.getHs1D(self)):
-            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="",flush=True)
             adjs.append(self.computeAdjoint(H))
         print("");
         #this will run out of memory...
-        print("Calculating Phis...")
+        print("Calculating Phis...",flush=True)
         for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
             for j,adj in enumerate(adjs):
             
                
@@ -768,9 +773,13 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         """
         #uses self.X and observations y.
         
+        print("Calculating SS")
         SS = (1./(self.noiseSD**2))*(self.X@self.X.T) +np.eye(self.N_feat)
+        print("Inverting SS")
         covZ =SSinv= np.linalg.inv(SS)
+        print("Computing meanZ")
         meanZ=(1./(self.noiseSD**2))*(SSinv @self.X@y) #sum_cc.flatten())
+        print("Done")
         return meanZ, covZ   
     
     
