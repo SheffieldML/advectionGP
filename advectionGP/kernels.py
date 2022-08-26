@@ -56,8 +56,28 @@ class EQ(Kernel):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('i,i...->...',w/self.l2,coords)+ b)
             yield phi
             
+    def getPhiCompact(self,mu,coordList):
+        """
+        Generates a (N_feat,Nt,Nx,Ny) matrix of compact basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+        """
+        for mus in mu:
+            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[2]))**2))
+            yield phi
+            
+            
+    def getPhiCompact2D(self,mu,coordList):
+        """
+        Generates a (N_feat,Nt,Nx,Ny) matrix of compact basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+        """
+        for mus in mu:
+            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[1]))**2))
+            yield phi
 
-    def getPhiValues(self,particles):
+    def getPhiValues(self,particles,compact=False):
         """
         Evaluates all features at location of all particles.
         
@@ -73,6 +93,25 @@ class EQ(Kernel):
         c=1/(self.l2)
         norm = 1./np.sqrt(self.N_feat)
         return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
+    
+    def getPhiValuesCompact(self,mu,particles,compact=False):
+        """
+        Evaluates all features at location of all particles.
+        
+        
+        Nearly a duplicate of getPhi, this returns phi for the locations in particles. 
+        
+        Importantly, particles is of shape N_ObsxN_Particlesx3,
+        (typically N_Obs is the number of observations, N_ParticlesPerObs is the number of particles/observation. 3 is the dimensionality of the space).
+        
+        Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
+        
+        """
+        coordList=particles
+        phi=np.zeros([mu.shape[0],particles.shape[1],particles.shape[0]])
+        for i,mus in enumerate(mu):
+            phi[i,:,:]=((1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[:,:,0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[:,:,1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[:,:,2]))**2))).T
+        return phi
 
 
     def getPhi1D(self,coords):
@@ -92,3 +131,17 @@ class EQ(Kernel):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos((c*w*np.array(coords))+b)
             yield phi
             
+    def getPhi1DCompact(self,mu,coords):
+        """
+        Generates a (N_feat,Nt) matrix of basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t) points in the grid
+        """
+
+
+        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
+        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
+        #c=np.sqrt(2.0)/(self.l2)
+        for mus in mu:
+            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2**2))*((mus-np.array(coords))**2))
+            yield phi
