@@ -19,7 +19,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         particles = np.array(particles)
         return particles
         
-    def computeModelRegressors(self,Nparticles=10,compact=False):
+    def computeModelRegressors(self,Nparticles=10,gaussian=False):
         """
         Computes the regressor matrix X, using the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -42,7 +42,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         
         X = np.zeros([self.N_feat,N_obs])
         print("Diffusing particles...")
-        if compact==False:
+        if gaussian==False:
             for nit in range(Nt): 
                 print("%d/%d \r" % (nit,Nt),end="")
                 wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]

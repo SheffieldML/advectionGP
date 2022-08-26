@@ -177,7 +177,7 @@ class AdvectionDiffusionModel():
         
      
         
-    def computeSourceFromPhi(self,z,coords=None,compact=False):
+    def computeSourceFromPhi(self,z,coords=None,gaussian=False):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
         set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
@@ -187,7 +187,7 @@ class AdvectionDiffusionModel():
         if coords is None: coords = self.coords
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
-        if compact==True:
+        if gaussian==True:
             print("Computing Source from Phi...")
             for i,phi in enumerate(self.kernel.getPhiCompact(self.mu,self.coords)):
                 print("%d/%d \r" % (i,self.kernel.N_feat),end="")
@@ -200,7 +200,7 @@ class AdvectionDiffusionModel():
         return self.source
         
         
-    def computeSourceFromPhiInterpolated(self,z,coords=None,compact=False):
+    def computeSourceFromPhiInterpolated(self,z,coords=None,gaussian=False):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
         set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
@@ -212,8 +212,8 @@ class AdvectionDiffusionModel():
         zhash = gethash(z)
         if zhash not in self.sourcecache:
             print("cache miss, computing source from phi...")
-            if compact==True:
-                source = self.computeSourceFromPhi(z,compact=True)
+            if gaussian==True:
+                source = self.computeSourceFromPhi(z,gaussian=True)
             else:
                 source = self.computeSourceFromPhi(z)    
             self.sourcecache[zhash] = source
@@ -277,7 +277,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         return v
 
 
-    def computeModelRegressors(self,compact=False):
+    def computeModelRegressors(self,gaussian=False):
         """
         Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -294,7 +294,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...")
-        if compact==True:
+        if gaussian==True:
             print("Computing Source from Phi...")
             for i,phi in enumerate(self.kernel.getPhiCompact(self.mu,self.coords)):
                 print("%d/%d \r" % (i,len(self.kernel.W)),end="")
@@ -715,7 +715,7 @@ class SecondOrderODEModel():
         
      
         
-    def computeSourceFromPhi(self,z,compact=False):
+    def computeSourceFromPhi(self,z,gaussian=False):
         """
         uses getPhi1D from the kernel and a given z vector to generate a source function     
         """
@@ -723,7 +723,7 @@ class SecondOrderODEModel():
         
         #for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
         
-        if compact==True:
+        if gaussian==True:
             for i,phi in enumerate(self.kernel.getPhi1DCompact(self.mu,self.coords)):
             
                 self.source[:,None] += phi*z[i]
@@ -757,7 +757,7 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         return v
 
 
-    def computeModelRegressors(self,compact=False):
+    def computeModelRegressors(self,gaussian=False):
         """
         Computes the regressor matrix X, using getHs1D from the senor model and getPhi1D from the kernel.
         X here is used to infer the distribution of z (and hence the source)
@@ -776,7 +776,7 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         #this will run out of memory...
         print("Calculating Phis...",flush=True)
         #
-        if compact==True:
+        if gaussian==True:
             for i,phi in enumerate(self.kernel.getPhi1DCompact(self.mu,self.coords)):
                 print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
                 for j,adj in enumerate(adjs):
@@ -1144,7 +1144,7 @@ class AdvectionDiffusion1DModel():
         
      
         
-    def computeSourceFromPhi(self,z,coords=None,compact=False):
+    def computeSourceFromPhi(self,z,coords=None,gaussian=False):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
         set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
@@ -1154,7 +1154,7 @@ class AdvectionDiffusion1DModel():
         if coords is None: coords = self.coords
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
-        if compact==True:
+        if gaussian==True:
             print("Computing Source from Phi...")
             for i,phi in enumerate(self.kernel.getPhiCompact2D(self.mu,self.coords)):
                 print("%d/%d \r" % (i,self.kernel.N_feat),end="")
@@ -1189,7 +1189,7 @@ class AdjointAdvectionDiffusion1DModel(AdvectionDiffusion1DModel):
         return v
 
 
-    def computeModelRegressors(self,compact=False):
+    def computeModelRegressors(self,gaussian=False):
         """
         Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -1206,7 +1206,7 @@ class AdjointAdvectionDiffusion1DModel(AdvectionDiffusion1DModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...")
-        if compact==True:
+        if gaussian==True:
             print("Computing Source from Phi...")
             for i,phi in enumerate(self.kernel.getPhiCompact2D(self.mu,self.coords)):
                 print("%d/%d \r" % (i,len(self.kernel.W)),end="")
