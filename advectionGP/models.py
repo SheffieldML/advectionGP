@@ -59,7 +59,7 @@ class AdvectionDiffusionModel():
         yy=np.linspace(self.boundary[0][2],self.boundary[1][2],self.resolution[2])
         self.coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
         #self.coords=coords.reshape(self.N_D,self.resolution[0]*self.resolution[1]*self.resolution[2])
-        
+      
         #Compute some variables useful for PDEs
         
         self.u = self.windmodel.getu(self) #advection term: size 2 x resolution grid
@@ -70,13 +70,12 @@ class AdvectionDiffusionModel():
         #assert self.X.shape[1]==4, "The X input matrix should be Nx4."
         #assert self.y.shape[0]==self.X.shape[0], "The length of X should equal the length of y"
         self.kernel = kernel
-        self.kernel.generateFeatures(self.N_D,N_feat) 
+        self.kernel.generateFeatures(self.N_D,N_feat,boundary) 
         self.N_feat = N_feat
         
         self.sourcecache = {}
 
         dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
-        self.mu = np.array([np.random.uniform(boundary[0][0],boundary[1][0],N_feat),np.random.uniform(boundary[0][1],boundary[1][1],N_feat),np.random.uniform(boundary[0][2],boundary[1][2],N_feat)]).T
         if (dx>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (dt>=dx2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
 
@@ -177,7 +176,7 @@ class AdvectionDiffusionModel():
         
      
         
-    def computeSourceFromPhi(self,z,coords=None,gaussian=False):
+    def computeSourceFromPhi(self,z,coords=None):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
         set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
@@ -187,20 +186,16 @@ class AdvectionDiffusionModel():
         if coords is None: coords = self.coords
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
-        if gaussian==True:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhiCompact(self.mu,self.coords)):
-                print("%d/%d \r" % (i,self.kernel.N_feat),end="")
-                self.source += phi*z[i]
-        else:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhi(coords)):
-                print("%d/%d \r" % (i,self.kernel.N_feat),end="")
-                self.source += phi*z[i]
+        
+        print("Computing Source from Phi...")
+        for i,phi in enumerate(self.kernel.getPhi(coords)):
+            print("%d/%d \r" % (i,self.kernel.N_feat),end="")
+            self.source += phi*z[i]
+        
         return self.source
         
         
-    def computeSourceFromPhiInterpolated(self,z,coords=None,gaussian=False):
+    def computeSourceFromPhiInterpolated(self,z,coords=None):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
         set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
@@ -212,10 +207,7 @@ class AdvectionDiffusionModel():
         zhash = gethash(z)
         if zhash not in self.sourcecache:
             print("cache miss, computing source from phi...")
-            if gaussian==True:
-                source = self.computeSourceFromPhi(z,gaussian=True)
-            else:
-                source = self.computeSourceFromPhi(z)    
+            source = self.computeSourceFromPhi(z)
             self.sourcecache[zhash] = source
         else:
             #print("cache hit")
@@ -277,7 +269,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         return v
 
 
-    def computeModelRegressors(self,gaussian=False):
+    def computeModelRegressors(self):
         """
         Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -294,17 +286,10 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...")
-        if gaussian==True:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhiCompact(self.mu,self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="")
-                for j,adj in enumerate(adjs):
-                    X[i,j] = np.sum((phi*adj))*dt*dx*dy
-        else:
-            for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="")
-                for j,adj in enumerate(adjs):
-                    X[i,j] = np.sum((phi*adj))*dt*dx*dy
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            for j,adj in enumerate(adjs):
+                X[i,j] = np.sum((phi*adj))*dt*dx*dy
         print("");
         #phi * v, --> scale
         self.X = X
@@ -637,9 +622,9 @@ class SecondOrderODEModel():
         self.eta=eta
         
         self.kernel = kernel
-        self.kernel.generateFeatures(self.N_D,N_feat) 
+        self.kernel.generateFeatures(self.N_D,N_feat,boundary) 
         self.N_feat = N_feat
-        self.mu = np.random.uniform(self.coords[0],self.coords[-1],self.N_feat)
+        
         dt,dt2,Nt = self.getGridStepSize()
         
     def getGridStepSize(self):
@@ -715,22 +700,14 @@ class SecondOrderODEModel():
         
      
         
-    def computeSourceFromPhi(self,z,gaussian=False):
+    def computeSourceFromPhi(self,z):
         """
         uses getPhi1D from the kernel and a given z vector to generate a source function     
         """
         self.source = np.zeros(self.resolution) 
-        
-        #for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
-        
-        if gaussian==True:
-            for i,phi in enumerate(self.kernel.getPhi1DCompact(self.mu,self.coords)):
+        for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
             
-                self.source[:,None] += phi*z[i]
-        else:    
-            for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
-            
-                self.source[:,None] += phi*z[i]
+            self.source[:,None] += phi*z[i]
             
         return self.source
     
@@ -757,7 +734,7 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         return v
 
 
-    def computeModelRegressors(self,gaussian=False):
+    def computeModelRegressors(self):
         """
         Computes the regressor matrix X, using getHs1D from the senor model and getPhi1D from the kernel.
         X here is used to infer the distribution of z (and hence the source)
@@ -775,18 +752,12 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...",flush=True)
-        #
-        if gaussian==True:
-            for i,phi in enumerate(self.kernel.getPhi1DCompact(self.mu,self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
-                for j,adj in enumerate(adjs):
-                    X[i,j] = np.sum(np.array(phi)*np.array(adj[:,None])*dt)
-        else: 
-            for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
-                for j,adj in enumerate(adjs):
+        for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
+            for j,adj in enumerate(adjs):
+            
                
-                    X[i,j] = np.sum(np.array(phi)*np.array(adj[:,None])*dt)
+                X[i,j] = np.sum(np.array(phi)*np.array(adj[:,None])*dt)
                 
         print("");
         #phi * v, --> scale 
@@ -810,8 +781,7 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         meanZ=(1./(self.noiseSD**2))*(SSinv @self.X@y) #sum_cc.flatten())
         print("Done")
         return meanZ, covZ   
-
-
+    
     
 class ShiftOperatorModel():
     def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,N_feat=25,spatial_averaging=1.0):
@@ -868,7 +838,7 @@ class ShiftOperatorModel():
         #assert self.X.shape[1]==4, "The X input matrix should be Nx4."
         #assert self.y.shape[0]==self.X.shape[0], "The length of X should equal the length of y"
         self.kernel = kernel
-        self.kernel.generateFeatures(self.N_D,N_feat) 
+        self.kernel.generateFeatures(self.N_D,N_feat,boundary) 
         self.N_feat = N_feat
         
 
@@ -1047,7 +1017,7 @@ class AdvectionDiffusion1DModel():
         #assert self.X.shape[1]==4, "The X input matrix should be Nx4."
         #assert self.y.shape[0]==self.X.shape[0], "The length of X should equal the length of y"
         self.kernel = kernel
-        self.kernel.generateFeatures(self.N_D,N_feat) 
+        self.kernel.generateFeatures(self.N_D,N_feat,boundary) 
         self.N_feat = N_feat
         
         self.sourcecache = {}
@@ -1154,16 +1124,11 @@ class AdvectionDiffusion1DModel():
         if coords is None: coords = self.coords
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
-        if gaussian==True:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhiCompact2D(self.mu,self.coords)):
-                print("%d/%d \r" % (i,self.kernel.N_feat),end="")
-                self.source += phi*z[i]
-        else:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhi(coords)):
-                print("%d/%d \r" % (i,self.kernel.N_feat),end="")
-                self.source += phi*z[i]
+
+        print("Computing Source from Phi...")
+        for i,phi in enumerate(self.kernel.getPhi2D(coords)):
+            print("%d/%d \r" % (i,self.kernel.N_feat),end="")
+            self.source += phi*z[i]
         return self.source
         
 class AdjointAdvectionDiffusion1DModel(AdvectionDiffusion1DModel):
@@ -1206,17 +1171,12 @@ class AdjointAdvectionDiffusion1DModel(AdvectionDiffusion1DModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...")
-        if gaussian==True:
-            print("Computing Source from Phi...")
-            for i,phi in enumerate(self.kernel.getPhiCompact2D(self.mu,self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="")
-                for j,adj in enumerate(adjs):
-                    X[i,j] = np.sum((phi*adj))*dt*dx
-        else:
-            for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-                print("%d/%d \r" % (i,len(self.kernel.W)),end="")
-                for j,adj in enumerate(adjs):
-                    X[i,j] = np.sum((phi*adj))*dt*dx
+
+
+        for i,phi in enumerate(self.kernel.getPhi2D(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            for j,adj in enumerate(adjs):
+                X[i,j] = np.sum((phi*adj))*dt*dx
         print("");
         #phi * v, --> scale
         self.X = X

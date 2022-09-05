@@ -1,3 +1,4 @@
+
 from advectionGP.models import AdjointAdvectionDiffusionModel
 import numpy as np
 
@@ -19,7 +20,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         particles = np.array(particles)
         return particles
         
-    def computeModelRegressors(self,Nparticles=10,gaussian=False):
+    def computeModelRegressors(self,Nparticles=10):
         """
         Computes the regressor matrix X, using the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -42,35 +43,19 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         
         X = np.zeros([self.N_feat,N_obs])
         print("Diffusing particles...")
-        if gaussian==False:
-            for nit in range(Nt): 
-                print("%d/%d \r" % (nit,Nt),end="")
-                wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
-                particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
-                particles[:,:,0]-=dt
+        for nit in range(Nt): 
+            print("%d/%d \r" % (nit,Nt),end="")
+            wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
+            particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
+            particles[:,:,0]-=dt
 
-                keep = particles[:,0,0]>self.boundary[0][0] #could extend to be within grid space
-                X[:,keep] += np.sum(self.kernel.getPhiValues(particles),axis=(1))[:,keep]
-                if np.sum(keep)==0: 
-                    break
-            X = np.array(X)/scale
-            self.X = X
-            self.particles = particles
-            
-        else:
-            for nit in range(Nt): 
-                print("%d/%d \r" % (nit,Nt),end="")
-                wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
-                particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
-                particles[:,:,0]-=dt
-
-                keep = particles[:,0,0]>self.boundary[0][0] #could extend to be within grid space
-                X[:,keep] += np.sum(self.kernel.getPhiValuesCompact(self.mu,particles),axis=(1))[:,keep]
-                if np.sum(keep)==0: 
-                    break
-            X = np.array(X)/scale
-            self.X = X
-            self.particles = particles
+            keep = particles[:,0,0]>self.boundary[0][0] #could extend to be within grid space
+            X[:,keep] += np.sum(self.kernel.getPhiValues(particles),axis=(1))[:,keep]
+            if np.sum(keep)==0: 
+                break
+        X = np.array(X)/scale
+        self.X = X
+        self.particles = particles
         return X
         
     def computeConcentration(self,meanZ=None,covZ=None,Nsamps=10,Nparticles=30,coords=None,particles=None,interpolateSource=False,Zs=None):
@@ -83,8 +68,6 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         Compute the concentration using the particle approach.
         Nsamps = number of samples to take of Z. If you use just one, it uses the mean.
         Nparticles = number of particles to use
-
-
         returns mean and variance
         """
             
@@ -132,4 +115,3 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         conc = np.array(conc) #/scale
         conc = np.mean(conc,axis=1)*dt #average over particles
         return np.mean(conc,axis=0),np.var(conc,axis=0),conc
-
