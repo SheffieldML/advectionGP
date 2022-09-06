@@ -54,25 +54,7 @@ class EQ(Kernel):
         ####c=1/(self.l2)
         for w,b in zip(self.W,self.b):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('i,i...->...',w/self.l2,coords)+ b)
-            yield phi
-            
-    def getPhi2D(self,coords):
-        """
-        Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
-        Arguments:
-            coords: map of all (t,x,y) points in the grid
-        """
-        assert self.W is not None, "Need to call generateFeatures before computing phi."
-        norm = 1./np.sqrt(self.N_feat)
-        
-        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
-        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
-        #c=np.sqrt(2.0)/(self.l2)
-        ####c=1/(self.l2)
-        for w,b in zip(self.W,self.b):
-            phi=norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('i,i...->...',w/self.l2,coords)+ b)
-            yield phi
-            
+            yield phi                       
 
     def getPhiValues(self,particles):
         """
@@ -93,22 +75,6 @@ class EQ(Kernel):
   
 
 
-    def getPhi1D(self,coords):
-        """
-        Generates a (N_feat,Nt) matrix of basis vectors using features from generateFeatures 
-        Arguments:
-            coords: map of all (t) points in the grid
-        """
-        assert self.W is not None, "Need to call generateFeatures before computing phi."
-        norm = 1./np.sqrt(self.N_feat)
-
-        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
-        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
-        #c=np.sqrt(2.0)/(self.l2)
-        c=1/self.l2[0]
-        for w,b in zip(self.W,self.b):
-            phi=norm*np.sqrt(2*self.sigma2)*np.cos((c*w*np.array(coords))+b)
-            yield phi
             
 
             
@@ -136,37 +102,24 @@ class GaussianBases(Kernel):
         """
         if np.isscalar(self.l2):
             self.l2 = np.repeat(self.l2,N_D)
-        mu=[]
-        for i in range(len(boundary[0])):
-            mu.append([np.random.uniform(boundary[0][i],boundary[1][i],N_feat)])
-        #mu.reshape(-1,mu.shape[-1])
-        self.mu=np.squeeze(np.array(mu).T)
-        self.W = np.random.normal(0,1.0,size=(N_feat,N_D))
-        self.b = np.random.uniform(0.,2*np.pi,size=N_feat)
+        self.mu = np.random.uniform(low=boundary[0],high=boundary[1],size=[N_feat,len(boundary[0])])
+
         self.N_D = N_D
         self.N_feat = N_feat
             
-    def getPhi(self,coordList):
+    def getPhi(self,coords):
         """
-        Generates a (N_feat,Nt,Nx,Ny) matrix of compact basis vectors using features from generateFeatures 
+        Generates a series (of N_feat) matrices, shape (Nt,Nx,Ny) of compact basis vectors using features from generateFeatures 
         Arguments:
-            coords: map of all (t,x,y) points in the grid
+            coords: an array of D x [Nt, Nx, Ny, Nz...] coords of points
+        Notes:
+            uses self.mu, N_feat x D
         """
-        for mus in self.mu:
-            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[2]))**2))
+        for centre in self.mu:
+            sqrdists = np.sum(((np.transpose(coords,list(range(1,coords.ndim))+[0])-centre)**2)/(self.l2**2),coords.ndim-1)
+            phi = (1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-sqrdists/2)
             yield phi
             
-            
-    def getPhi2D(self,coordList):
-        """
-        Generates a (N_feat,Nt,Nx,Ny) matrix of compact basis vectors using features from generateFeatures 
-        Arguments:
-            coords: map of all (t,x,y) points in the grid
-        """
-        for mus in self.mu:
-            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[1]))**2))
-            yield phi
-    
     def getPhiValues(self,particles):
         """
         Evaluates all features at location of all particles.
@@ -188,17 +141,3 @@ class GaussianBases(Kernel):
         return phi
 
 
-    def getPhi1D(self,coords):
-        """
-        Generates a (N_feat,Nt) matrix of basis vectors using features from generateFeatures 
-        Arguments:
-            coords: map of all (t) points in the grid
-        """
-
-
-        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
-        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
-        #c=np.sqrt(2.0)/(self.l2)
-        for mus in self.mu:
-            phi=(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2**2))*((mus-np.array(coords))**2))
-            yield phi

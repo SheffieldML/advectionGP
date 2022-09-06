@@ -287,7 +287,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         #this will run out of memory...
         print("Calculating Phis...")
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            print("%d/%d \r" % (i,self.N_feat),end="")
             for j,adj in enumerate(adjs):
                 X[i,j] = np.sum((phi*adj))*dt*dx*dy
         print("");
@@ -345,7 +345,7 @@ class AdjointAdvectionDiffusionModel(AdvectionDiffusionModel):
         #this will run out of memory...
         print("Calculating Phis...")
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            print("%d/%d \r" % (i,self.N_feat),end="")
             for j,adj in enumerate(adjs):
                 X[i,j] = np.sum((phi*adj))*dt*dx*dy
         print("");
@@ -611,9 +611,9 @@ class SecondOrderODEModel():
         self.sensormodel = sensormodel
         
         
-        #coords is a Nt x D array of locations of the grid vertices.
+        #coords is a D x Nt array of locations of the grid vertices.
         #TODO Maybe write more neatly...
-        self.coords=np.array(np.linspace(self.boundary[0],self.boundary[1],self.resolution[0]))
+        self.coords=np.linspace(self.boundary[0],self.boundary[1],self.resolution[0]).T
       
         #Establish ODE variables
         
@@ -702,12 +702,12 @@ class SecondOrderODEModel():
         
     def computeSourceFromPhi(self,z):
         """
-        uses getPhi1D from the kernel and a given z vector to generate a source function     
+        uses getPhi from the kernel and a given z vector to generate a source function     
         """
         self.source = np.zeros(self.resolution) 
-        for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
             
-            self.source[:,None] += phi*z[i]
+            self.source += phi*z[i]
             
         return self.source
     
@@ -736,7 +736,7 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
 
     def computeModelRegressors(self):
         """
-        Computes the regressor matrix X, using getHs1D from the senor model and getPhi1D from the kernel.
+        Computes the regressor matrix X, using getHs1D from the senor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source)
         """
         print("Getting Grid Step Size",flush=True)
@@ -752,12 +752,10 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         print("");
         #this will run out of memory...
         print("Calculating Phis...",flush=True)
-        for i,phi in enumerate(self.kernel.getPhi1D(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="",flush=True)
+        for i,phi in enumerate(self.kernel.getPhi(self.coords)):
+            print("%d/%d \r" % (i,self.N_feat),end="",flush=True)
             for j,adj in enumerate(adjs):
-            
-               
-                X[i,j] = np.sum(np.array(phi)*np.array(adj[:,None])*dt)
+                X[i,j] = np.sum(phi*adj)*dt
                 
         print("");
         #phi * v, --> scale 
@@ -1174,7 +1172,7 @@ class AdjointAdvectionDiffusion1DModel(AdvectionDiffusion1DModel):
 
 
         for i,phi in enumerate(self.kernel.getPhi2D(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            print("%d/%d \r" % (i,self.N_feat),end="")
             for j,adj in enumerate(adjs):
                 X[i,j] = np.sum((phi*adj))*dt*dx
         print("");
