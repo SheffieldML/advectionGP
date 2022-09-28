@@ -4,11 +4,11 @@ from scipy.interpolate import griddata
 def gethash(z):
     return hash(z.tobytes())
         
-def squash(M):
-    if M.shape[0]==3:
-        return M.reshape(M.shape[0],np.prod(M.shape[1:]))
-    if M.shape[-1]==3:
-        return M.reshape(np.prod(M.shape[1:],M.shape[-1]))
+#def squash(M):
+#    if M.shape[0]==3:
+#        return M.reshape(M.shape[0],np.prod(M.shape[1:]))
+#    if M.shape[-1]==3:
+#        return M.reshape(np.prod(M.shape[1:],M.shape[-1]))
 
 
 class AdvectionDiffusionModel():
