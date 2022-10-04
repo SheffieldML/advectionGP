@@ -1,7 +1,19 @@
-from advectionGP.models import AdjointAdvectionDiffusionModel
+#from advectionGP.models import AdjointAdvectionDiffusionModel
+from advectionGP.models.mesh_model import MeshModel
+from scipy.interpolate import griddata
 import numpy as np
 
-class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
+def gethash(z):
+    return hash(z.tobytes())
+        
+class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
+    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,k_0,R=0,N_feat=25):
+        super().__init__(boundary,resolution,kernel,noiseSD,sensormodel,N_feat)
+        self.windmodel = windmodel
+        self.k_0 = k_0
+        #self.R=R  
+        if R!=0: assert False, "Not yet implemented reaction term, set R to zero."      
+        
     def computeAdjoint(self,H):
         assert False, "This isn't used in this child class, as we compute the Phi array in a single step, see computeModelRegressors()."
         
@@ -18,7 +30,45 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
             particles.append(newparticles)
         particles = np.array(particles)
         return particles
+
+    def computeSourceFromPhiInterpolated(self,z,coords=None):
+        """
+        uses getPhi from the kernel and a given z vector to generate a source function     
+        set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
+                e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
         
+        """
+        if coords is None: coords = self.coords.transpose([1,2,3,0])
+        
+        zhash = gethash(z)
+        if zhash not in self.sourcecache:
+            print("cache miss, computing source from phi...")
+            source = self.computeSourceFromPhi(z)
+            self.sourcecache[zhash] = source
+        else:
+            #print("cache hit")
+            source = self.sourcecache[zhash]
+        
+        gcs = self.getGridCoord(coords)
+        keep = (gcs<source.shape) & (gcs>=0)
+        gcs[~keep]=0 #just set to something that won't break stuff
+        s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
+        s[~np.all(keep,-1)]=0
+        return s
+        
+        
+        #resolution = np.array(coords.shape[1:])
+        #self.source = np.zeros(resolution) 
+        
+        
+        #self.temp = self.coords, source, coords
+        #return self.computeSourceFromPhi(z,coords.transpose([4,0,1,2,3]))
+        
+        #print("Interpolating...")
+        #sourceatcoords = griddata(squash(self.coords).T, source.flatten(), coords, method='linear')
+        #print("Done")
+        #return sourceatcoords
+                
     def computeModelRegressors(self,Nparticles=10):
         """
         Computes the regressor matrix X, using the sensor model and getPhi from the kernel.
@@ -29,8 +79,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         
         uses just dt, Nt and boundary[0][0].
         """
-        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize() #only bit we use is dt and Nt
-        
+        delta, Ns = self.getGridStepSize()
+        dt = delta[0]
+        Nt = Ns[0]
         scale = Nparticles / dt
 
         particles = self.genParticlesFromObservations(Nparticles)
@@ -70,7 +121,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(AdjointAdvectionDiffusionModel):
         returns mean and variance
         """
             
-        dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize() #only bit we use is dt and Nt
+        delta, Ns = self.getGridStepSize() #only bit we use is dt and Nt
+        dt = delta[0]
+        Nt = Ns[0]
 
         #meanZ, covZ = self.computeZDistribution(Y) # Infers z vector mean and covariance using regressor matrix
         #sourceInfer = self.computeSourceFromPhi(meanZ) # Generates estimated source using mean of the inferred distribution
