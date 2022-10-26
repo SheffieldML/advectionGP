@@ -8,16 +8,56 @@ def gethash(z):
         
 class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
     def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,k_0,R=0,N_feat=25):
+        """
+        This model uses particle approximation to compute the adjoints for the advection/diffusion model
+
+        The Adjoint in all approaches in this module is used to compute the Phi matrix,
+        (the 'design matrix' we can use to compute the posterior distribution or ML
+        solution). Each element of Phi consists of the inner product of the solution to
+        the adjoint for a given sensor, and one of the basis vectors.
+        
+        In the mesh-free approach we approximate these inner products by allowing
+        particles to diffuse and advect following the adjoint (i.e. using L* rather
+        than L). We effectively step backwards in time, and at each time step, evaluate
+        all the bases at all the particle locations.
+
+        As a consequence the computeAdjoint method is not implemented.
+        
+        Parameters
+            boundary = a two element tuple of the corners of the grid 
+                  ([start_time,start_spaceX,start_spaceY...],[end_time,end_spaceX,end_spaceY...]). e.g. ([0,0,0],[10,10,10])        
+            resolution = a list of the grid size in each dimension. e.g. [10,20,20] (time first)
+            kernel = the kernel to use
+            noiseSD = the noise standard deviation
+            sensormodel = an instatiation of a SensorModel class that implements the getHs method.
+            windmodel = an instance of a Wind class (to build u using)
+            k_0 = diffusion constant
+            R = has to be zero at the moment, a reaction term is not implemented.
+            N_feat = Number of features in the approximation.
+        """
         super().__init__(boundary,resolution,kernel,noiseSD,sensormodel,N_feat)
         self.windmodel = windmodel
         self.k_0 = k_0
-        #self.R=R  
+        #self.R=R
         if R!=0: assert False, "Not yet implemented reaction term, set R to zero."      
         
     def computeAdjoint(self,H):
         assert False, "This isn't used in this child class, as we compute the Phi array in a single step, see computeModelRegressors()."
         
     def genParticlesFromObservations(self,Nparticles,sensormodel=None):
+        """
+        We need to place particles at the sensors, which will then be iteratively
+        moved around (based on the adjoint, L*).
+    
+        Parameters    
+            Nparticles = Specify the number of particles per observation
+            sensormodel = If you want to use different "sensors" (e.g. query
+                            a point not used in training), set this parameter,
+                            default to None - which uses the sensormodel used
+                            for training.
+        
+        The method returns an array of [N_obs, Nparticles, ... ? ] #TODO
+        """
         if sensormodel is None:
             sensormodel = self.sensormodel
         particles = []
