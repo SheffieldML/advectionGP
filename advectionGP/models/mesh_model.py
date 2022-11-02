@@ -188,3 +188,8 @@ class MeshModel():
         
         return meanSource, varSource        
         
+
+    def getSystemDerivative(self,conc,source):
+        h_p=self.computeSystemDerivative(conc,source)
+        return h_p
+        
