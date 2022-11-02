@@ -106,7 +106,7 @@ class GaussianBases(Kernel):
 
         self.N_D = N_D
         self.N_feat = N_feat
-            
+ 
     def getPhi(self,coords):
         """
         Generates a series (of N_feat) matrices, shape (Nt,Nx,Ny) of compact basis vectors using features from generateFeatures 
