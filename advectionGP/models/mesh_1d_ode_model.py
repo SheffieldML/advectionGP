@@ -130,5 +130,5 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
     
     def computeSystemDerivative(self,conc,source):
         delta, Ns = self.getGridStepSize()
-        dmH=np.array([np.gradient(conc,delta[0])/self.k_0,conc/self.k_0,(-self.u*np.gradient(conc,delta[0])-self.eta*conc+source)/self.k_0**2])
+        dmH=-np.array([np.gradient(conc,delta[0])/self.k_0,conc/self.k_0,(-self.u*np.gradient(conc,delta[0])-self.eta*conc+source)/self.k_0**2])
         return dmH
