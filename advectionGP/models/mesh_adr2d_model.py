@@ -1,4 +1,5 @@
 import numpy as np
+from advectionGP.wind import WindSimple#Wind model
 from advectionGP.models.mesh_model import MeshModel
 
 class AdvectionDiffusionReaction2DModel(MeshModel):
@@ -12,7 +13,7 @@ class AdvectionDiffusionReaction2DModel(MeshModel):
         if (delta[1]>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (delta[0]>=delta[1]**2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
         
-    def computeConcentration(self,source,enforce_nonnegative=False):
+    def computeResponse(self,source,enforce_nonnegative=False):
         """
         Computes concentrations.
         Arguments:
@@ -152,6 +153,12 @@ class AdjointAdvectionDiffusionReaction2DModel(AdvectionDiffusionReaction2DModel
 
         dmH=np.array([dudx,dudy,-d2udx2-d2udy2,-conc])
         return dmH
+    
+    def assignParameters(self,params):
+        self.windmodel=WindSimple(params[0],params[1])
+        self.u=self.windmodel.getu(self)
+        self.k_0=params[2]
+        self.R=params[3]
 
     
 

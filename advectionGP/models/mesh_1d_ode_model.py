@@ -132,3 +132,9 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         delta, Ns = self.getGridStepSize()
         dmH=-np.array([np.gradient(conc,delta[0])/self.k_0,conc/self.k_0,(-self.u*np.gradient(conc,delta[0])-self.eta*conc+source)/self.k_0**2])
         return dmH
+    
+    def assignParameters(self,params)
+        self.k_0=params[2]
+        self.u=params[0]
+        self.eta=params[1]
+
