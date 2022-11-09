@@ -1,5 +1,6 @@
 import numpy as np
 from advectionGP.models.mesh_model import MeshModel
+from advectionGP.wind import WindSimple#Wind model
 
 class AdvectionDiffusionReaction1DModel(MeshModel):
     def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,k_0,R,N_feat=25):
@@ -12,7 +13,7 @@ class AdvectionDiffusionReaction1DModel(MeshModel):
         if (delta[1]>=2*self.k_0/np.min(np.abs(self.u))): print("WARNING: spatial grid size does not meet the finite difference advection diffusion stability criteria")
         if (delta[0]>=delta[1]**2/(2*self.k_0)): print("WARNING: temporal grid size does not meet the finite difference advection diffusion stability criteria")
 
-    def computeConcentration(self,source,enforce_nonnegative=False):        
+    def computeResponse(self,source,enforce_nonnegative=False):        
         """
         Computes concentrations.
         Arguments:
@@ -37,13 +38,14 @@ class AdvectionDiffusionReaction1DModel(MeshModel):
 
         k_0 = self.k_0
         u = self.u
+        R=self.R
         for i in range(0,Nt-1):
             # Corner BCs 
-            c[i+1,0]=c[i,0]+dt*( source[i,0] ) +dt*k_0*( 2*c[i,1]-2*c[i,0])/dx2
-            c[i+1,Nx-1]=c[i,Nx-1]+dt*( source[i,Nx-1])+dt*k_0*( 2*c[i,Nx-2]-2*c[i,Nx-1])/dx2
+            c[i+1,0]=c[i,0]+dt*( source[i,0] ) +dt*(k_0*( 2*c[i,1]-2*c[i,0])/dx2-R*c[i,0])
+            c[i+1,Nx-1]=c[i,Nx-1]+dt*( source[i,Nx-1])+dt*(k_0*( 2*c[i,Nx-2]-2*c[i,Nx-1])/dx2-R*c[i,Nx-1])
             #for k in range(1,Ny-1):
                 # Internal Calc
-            c[i+1,1:Nx-1]=c[i,1:Nx-1] +dt*(source[i,1:Nx-1]-u[0][i,1:Nx-1]*(c[i,2:Nx]-c[i,0:Nx-2])/(2*dx) +k_0*(c[i,2:Nx]-2*c[i,1:Nx-1]  +c[i,0:Nx-2])/dx2)
+            c[i+1,1:Nx-1]=c[i,1:Nx-1] +dt*(source[i,1:Nx-1]-u[0][i,1:Nx-1]*(c[i,2:Nx]-c[i,0:Nx-2])/(2*dx) +k_0*(c[i,2:Nx]-2*c[i,1:Nx-1]  +c[i,0:Nx-2])/dx2-R*c[i,1:Nx-1])
             if enforce_nonnegative: c[c<0]=0
         concentration = c 
         
@@ -69,11 +71,27 @@ class AdjointAdvectionDiffusionReaction1DModel(AdvectionDiffusionReaction1DModel
         v[-1,:]=0.0
         u=self.u
         k_0=self.k_0
+        R=self.R
         for i in range(1,Nt): #TODO might be better to rewrite as range(Nt-1,1,-1)...
     #Corner BCs   
-            v[-i-1,0]=v[-i,0]+dt*(H[-i,0]) # BC at x=0, y=0
-            v[-i-1,Nx-1]=v[-i,Nx-1]+dt*( H[-i,Nx-1]) # BC at x=xmax, y=ymax
+            v[-i-1,0]=v[-i,0]+dt*(H[-i,0]-R*v[-i,0]) # BC at x=0, y=0
+            v[-i-1,Nx-1]=v[-i,Nx-1]+dt*( H[-i,Nx-1]-R*v[-i,Nx-1]) # BC at x=xmax, y=ymax
 
     #Internal calculation (not on the boundary)
-            v[-i-1,1:Nx-1]=v[-i,1:Nx-1] +dt*( H[-i,1:Nx-1]+u[0][-i,1:Nx-1]*(v[-i,2:Nx]-v[-i,0:Nx-2])/(2*dx) +k_0*(v[-i,2:Nx]-2*v[-i,1:Nx-1]  +v[-i,0:Nx-2])/dx2)
+            v[-i-1,1:Nx-1]=v[-i,1:Nx-1] +dt*( H[-i,1:Nx-1]+u[0][-i,1:Nx-1]*(v[-i,2:Nx]-v[-i,0:Nx-2])/(2*dx) +k_0*(v[-i,2:Nx]-2*v[-i,1:Nx-1]  +v[-i,0:Nx-2])/dx2-R*v[-i,1:Nx-1])
         return v
+    
+    
+    def computeSystemDerivative(self,conc,source):
+        delta, Ns = self.getGridStepSize()
+        dudx=np.gradient(conc,delta[1],axis=1)
+        d2udx2 = np.gradient(dudx,delta[1],axis=1)
+
+        dmH=np.array([dudx,-d2udx2,conc])
+        return dmH
+    
+    def assignParameters(self,params):
+        self.windmodel=WindSimple(params[0],0)
+        self.u=self.windmodel.getu(self)
+        self.k_0=params[1]
+        self.R=params[2]

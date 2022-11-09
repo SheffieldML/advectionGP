@@ -23,7 +23,7 @@ class SquaredErrorSamplingCost():
         c=0
         for i,sample in enumerate(samp):
             source=model.computeSourceFromPhi(sample)
-            conc=model.computeConcentration(source)
+            conc=model.computeResponse(source)
             c1=np.zeros(model.resolution) # initialise cost
             M=len(obs) # number of observations
             c1[tuple([*coords.T])] = SquaredErrorSamplingCost.cost(conc,coords,obs,M,samp) # cost approximated with hill function
@@ -41,7 +41,7 @@ class SquaredErrorSamplingCost():
         for i,sample in enumerate(samp):
             #print(q.shape)
             source=model.computeSourceFromPhi(sample)
-            conc=model.computeConcentration(source)
+            conc=model.computeResponse(source)
             dmH=model.getSystemDerivative(conc,source)
             dc=np.zeros(model.resolution) #initialise cost derivative
             M=len(obs) # number of observations
@@ -52,7 +52,7 @@ class SquaredErrorSamplingCost():
             #L_m=np.sum(integrand)*np.prod(delta)/len(samp)
 
             for j, dmHi in enumerate(dmH):
-                integrand = model.computeGradientAdjoint(dc)*dmHi
+                integrand = model.computeAdjoint(-dc)*dmHi
     #L_m = np.trapz(integrand,dx=dt)
                 #L_m[j] += np.sum(integrand)*delta[0]*delta[1]*delta[2]
                 L_m[j] += np.sum(integrand)*np.prod(delta)
