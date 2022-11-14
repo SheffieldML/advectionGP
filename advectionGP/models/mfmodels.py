@@ -94,20 +94,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         gcs[~keep]=0 #just set to something that won't break stuff
         s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
         s[~np.all(keep,-1)]=0
-        return s
-        
-        
-        #resolution = np.array(coords.shape[1:])
-        #self.source = np.zeros(resolution) 
-        
-        
-        #self.temp = self.coords, source, coords
-        #return self.computeSourceFromPhi(z,coords.transpose([4,0,1,2,3]))
-        
-        #print("Interpolating...")
-        #sourceatcoords = griddata(squash(self.coords).T, source.flatten(), coords, method='linear')
-        #print("Done")
-        #return sourceatcoords
+        return s        
                 
     def computeModelRegressors(self,Nparticles=10):
         """
