@@ -103,32 +103,13 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         
         return v
     
-    def computeGradientAdjoint(self,dcost):
-        """
-        Runs the backward second order ODE (adjoint problem)
-        Gets called for an observation instance (H).
-        (v is the result of the adjoint operation)
-        """
-        dt,Nt = self.getGridStepSize()
-        Nt=Nt[0]
-        k_0=self.k_0
-        dt2=dt[0]**2
-        u=self.u
-        eta=self.eta
-        v=np.zeros(((self.resolution)))
-
-        #Boundary conditions
-        v[Nt-1] = 0
-        v[Nt-2] = (1.0/(1-(u*dt/(2*k_0))))*(-dcost[Nt-1]*(dt2)- v[Nt-1]-u*dt*v[Nt-1]/(k_0*2.0)+ 2*v[Nt-1]+(eta/k_0)*(dt2)*v[Nt-1])
-
-        # Calculation away from boundary
-        for i in reversed(range(1,Nt-1)):
-            #i=Nt-j-2
-            v[i-1]=(1.0/(1-(u*dt/(2*k_0))))*(-dcost[i]*(dt2)- v[i+1]-u*dt*v[i+1]/(k_0*2.0)+ 2*v[i]+(eta/k_0)*(dt2)*v[i])
-
-        return v
-    
     def computeSystemDerivative(self,conc,source):
         delta, Ns = self.getGridStepSize()
-        dmH=np.array([np.gradient(conc,delta[0])/self.k_0,conc/self.k_0,(-self.u*np.gradient(conc,delta[0])-self.eta*conc+source)/self.k_0**2])
+        dmH=-np.array([np.gradient(conc,delta[0])/self.k_0,conc/self.k_0,(-self.u*np.gradient(conc,delta[0])-self.eta*conc+source)/self.k_0**2])
         return dmH
+    
+    def assignParameters(self,params):
+        self.k_0=params[2]
+        self.u=params[0]
+        self.eta=params[1]
+
