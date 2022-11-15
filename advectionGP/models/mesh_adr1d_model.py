@@ -41,11 +41,11 @@ class AdvectionDiffusionReaction1DModel(MeshModel):
         R=self.R
         for i in range(0,Nt-1):
             # Corner BCs 
-            c[i+1,0]=c[i,0]+dt*( source[i,0] ) +dt*(k_0*( 2*c[i,1]-2*c[i,0])/dx2-R*c[i,0])
-            c[i+1,Nx-1]=c[i,Nx-1]+dt*( source[i,Nx-1])+dt*(k_0*( 2*c[i,Nx-2]-2*c[i,Nx-1])/dx2-R*c[i,Nx-1])
+            c[i+1,0]=c[i,0]+dt*( source[i,0] ) +dt*(-R*c[i,0]+k_0*( 2*c[i,1]-2*c[i,0])/dx2)
+            c[i+1,Nx-1]=c[i,Nx-1]+dt*( source[i,Nx-1])+dt*(-R*c[i,Nx-1]+k_0*( 2*c[i,Nx-2]-2*c[i,Nx-1])/dx2)
             #for k in range(1,Ny-1):
                 # Internal Calc
-            c[i+1,1:Nx-1]=c[i,1:Nx-1] +dt*(source[i,1:Nx-1]-u[0][i,1:Nx-1]*(c[i,2:Nx]-c[i,0:Nx-2])/(2*dx) +k_0*(c[i,2:Nx]-2*c[i,1:Nx-1]  +c[i,0:Nx-2])/dx2-R*c[i,1:Nx-1])
+            c[i+1,1:Nx-1]=c[i,1:Nx-1] +dt*(source[i,1:Nx-1]-R*c[i,1:Nx-1]-u[0][i,1:Nx-1]*(c[i,2:Nx]-c[i,0:Nx-2])/(2*dx) +k_0*(c[i,2:Nx]-2*c[i,1:Nx-1]  +c[i,0:Nx-2])/dx2)
             if enforce_nonnegative: c[c<0]=0
         concentration = c 
         
@@ -75,7 +75,7 @@ class AdjointAdvectionDiffusionReaction1DModel(AdvectionDiffusionReaction1DModel
         for i in range(1,Nt): #TODO might be better to rewrite as range(Nt-1,1,-1)...
     #Corner BCs   
             v[-i-1,0]=v[-i,0]+dt*(H[-i,0]-R*v[-i,0]) # BC at x=0, y=0
-            v[-i-1,Nx-1]=v[-i,Nx-1]+dt*( H[-i,Nx-1]-R*v[-i,Nx-1]) # BC at x=xmax, y=ymax
+            v[-i-1,Nx-1]=v[-i,Nx-1]+dt*(H[-i,Nx-1]-R*v[-i,Nx-1]) # BC at x=xmax, y=ymax
 
     #Internal calculation (not on the boundary)
             v[-i-1,1:Nx-1]=v[-i,1:Nx-1] +dt*( H[-i,1:Nx-1]+u[0][-i,1:Nx-1]*(v[-i,2:Nx]-v[-i,0:Nx-2])/(2*dx) +k_0*(v[-i,2:Nx]-2*v[-i,1:Nx-1]  +v[-i,0:Nx-2])/dx2-R*v[-i,1:Nx-1])
@@ -95,3 +95,7 @@ class AdjointAdvectionDiffusionReaction1DModel(AdvectionDiffusionReaction1DModel
         self.u=self.windmodel.getu(self)
         self.k_0=params[1]
         self.R=params[2]
+
+    def computeSourceLengthscaleDerivative(self,samples,obs,samp):
+        dmH=self.computeSourceDerivative(samples,obs,samp)
+        return dmH    

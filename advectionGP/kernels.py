@@ -74,7 +74,22 @@ class EQ(Kernel):
         return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
   
 
+    def getPhiDerivative(self,coords):
+        """
+        Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
+        Arguments:
+            coords: map of all (t,x,y) points in the grid
+        """
+        assert self.W is not None, "Need to call generateFeatures before computing phi."
+        norm = 1./np.sqrt(self.N_feat)
 
+        #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
+        #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
+        #c=np.sqrt(2.0)/(self.l2)
+        c=1/(self.l2)
+        for w,b in zip(self.W,self.b):
+            phi=(c**2)*np.einsum('i,i...->...',w,coords)*norm*np.sqrt(2*self.sigma2)*np.sin(np.einsum('i,i...->...',w/self.l2,coords)+ b)
+            yield phi
             
 
             

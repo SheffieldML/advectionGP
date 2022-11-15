@@ -119,6 +119,12 @@ class AdjointAdvectionDiffusionReaction2DModel(AdvectionDiffusionReaction2DModel
         self.u=self.windmodel.getu(self)
         self.k_0=params[2]
         self.R=params[3]
+        
+    def computeSourceLengthscaleDerivative(self,samples,obs,samp):
+        dmH=self.computeSourceDerivative(samples,obs,samp)
+        return dmH    
+        
+        
 
     
 

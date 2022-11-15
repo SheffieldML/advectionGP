@@ -192,4 +192,87 @@ class MeshModel():
     def getSystemDerivative(self,conc,source):
         h_p=self.computeSystemDerivative(conc,source)
         return h_p
+    
+    def computeModelRegressorsDerivative(self):
+        """
+        Computes the regressor matrix X, using getHs from the sensor model and getPhi from the kernel.
+        X here is used to infer the distribution of z (and hence the source).
+        X is [features x observations]
+        """
+        delta,Ns = self.getGridStepSize()
+        X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
         
+        adjs = []
+        print("Calculating Adjoints...")
+        for j,H in enumerate(self.sensormodel.getHs(self)):
+            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            adjs.append(self.computeAdjoint(H))
+        print("");
+        #this will run out of memory...
+        print("Calculating Phis...")
+        for i,phi in enumerate(self.kernel.getPhiDerivative(self.coords)):
+            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            for j,adj in enumerate(adjs):
+                X[i,j] = np.sum((phi*adj))*np.prod(delta)
+        print("");
+        #phi * v, --> scale
+        self.dX = X
+        return X
+    
+    def computeSourceDerivative(self,z,y,sample,coords=None):
+        """
+        uses getPhi from the kernel and a given z vector to generate a source function     
+        set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
+                e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
+        
+        """
+        if coords is None: coords = self.coords
+        resolution = np.array(coords.shape[1:])
+        dsource = np.zeros(resolution) 
+        dZ = self.computeZDerivative(y,sample)
+        for i, (phi,dphi) in enumerate(zip(self.kernel.getPhi(coords),self.kernel.getPhiDerivative(coords))):
+            dsource += dphi*z[i] + phi*dZ[i]
+        
+        return dsource
+    
+    def computeMeanZDerivative(self,y):
+        """
+        Computes the z distribution using the regressor matrix and a vector of observations
+        Arguments:
+            y: a vector of observations (either generated using compute observations of given by the user in the real data case)
+        """
+        #uses self.X and observations y.
+        dX = self.computeModelRegressorsDerivative()
+        X = self.computeModelRegressors()
+        SS = (1./(self.noiseSD**2))*(X@X.T) +np.eye(self.N_feat)
+        SSinv= np.linalg.inv(SS)
+        dZ= -(1./(self.noiseSD**2))*SSinv@((1./(self.noiseSD**2))*(dX@X.T + X@dX.T))@(SSinv @self.X@y)+(1./(self.noiseSD**2))*SSinv@dX@y
+        
+         #sum_cc.flatten())
+        return dZ
+        
+    def computeZDerivative(self,y,sample):
+        """
+        Computes the z distribution using the regressor matrix and a vector of observations
+        Arguments:
+            y: a vector of observations (either generated using compute observations of given by the user in the real data case)
+        """
+        #uses self.X and observations y.
+        dX = self.computeModelRegressorsDerivative()
+        X = self.computeModelRegressors()
+        SS = (1./(self.noiseSD**2))*(X@X.T) +np.eye(self.N_feat)
+        SSinv= np.linalg.inv(SS)
+        dmZ= -(1./(self.noiseSD**2))*SSinv@((1./(self.noiseSD**2))*(dX@X.T + X@dX.T))@(SSinv @self.X@y)+(1./(self.noiseSD**2))*SSinv@dX@y
+        chol = np.linalg.cholesky(SSinv)
+        cholInv=np.linalg.inv(chol)
+        temp=cholInv@(-SSinv@((1./(self.noiseSD**2))*(dX@X.T + X@dX.T))@SSinv)@cholInv.T
+        temp[np.triu_indices(self.N_feat, k = 1)]=0
+        temp[np.diag_indices_from(temp)]/=2
+        dZ=dmZ + chol@temp@sample
+        
+         #sum_cc.flatten())
+        return dZ    
+    
+    def getSourceLengthscaleDerivative(self,samples,obs,samp):
+        dmH=self.computeSourceLengthscaleDerivative(samples,obs,samp)
+        return dmH
