@@ -15,7 +15,7 @@ class EQ(Kernel):
         """
         A Exponentiated Quadratic kernel
         Arguments:
-            l2 == lengthscale
+            l2 == lengthscale (or lengthscales in a list of the length of the number of dimensions).
             sigma2 == variance of kernel
         """
         self.l2 = l2
@@ -30,6 +30,7 @@ class EQ(Kernel):
         Arguments:
             N_D = number of dimensions
             N_feat = number of features
+            boundary = a list of two lists describing the lower and upper corners of the domain [not used by this class]
         """
         if np.isscalar(self.l2):
             self.l2 = np.repeat(self.l2,N_D)
@@ -59,8 +60,7 @@ class EQ(Kernel):
     def getPhiValues(self,particles):
         """
         Evaluates all features at location of all particles.
-        
-        
+                
         Nearly a duplicate of getPhi, this returns phi for the locations in particles. 
         
         Importantly, particles is of shape N_ObsxN_Particlesx3,
@@ -83,6 +83,7 @@ class EQ(Kernel):
         assert self.W is not None, "Need to call generateFeatures before computing phi."
         norm = 1./np.sqrt(self.N_feat)
 
+
         #We assume that we are using the e^-(1/2 * x^2/l^2) definition of the EQ kernel,
         #(in Mauricio's definition he doesn't use the 1/2 factor - but that's less standard).
         #c=np.sqrt(2.0)/(self.l2)
@@ -92,32 +93,57 @@ class EQ(Kernel):
             yield phi
             
 
-            
+def meshgridndim(boundary,Nsteps):
+    """Returns points in a uniform grid within the boundary
+    
+    Parameters:
+        boundary = a list of two lists describing the lower and upper corners of the domain.
+            each list will be of Ndims long.
+        Nsteps = number of steps in each dimension.
+    Returns:
+        Returns a matrix of shape: (Nsteps^Ndims, Ndims)
+    """
+    Ndims = len(boundary[0])
+    g = np.array(np.meshgrid(*[np.linspace(a,b,Nsteps) for a,b in zip(boundary[0],boundary[1])]))
+    return g.reshape(Ndims,Nsteps**Ndims).T
+
+from advectionGP.kernels import Kernel
 class GaussianBases(Kernel):
-    def __init__(self,l2,sigma2):
+    def __init__(self,l2,sigma2,random=False):
         """
         A Exponentiated Quadratic kernel
         Arguments:
-            l2 == lengthscale
+            l2 == lengthscale (or lengthscales in a list of the length of the number of dimensions).
             sigma2 == variance of kernel
+            random = whether to sample the points randomly or in a uniform grid (default False)
         """
         self.l2 = l2
         self.sigma2 = sigma2
         self.W = None #need to be set by calling generateFeatures.
         self.b = None 
         self.mu= None
+        self.random = random
                 
     def generateFeatures(self,N_D,N_feat,boundary):
         """
-        Create a random basis for the kernel sampled from the normal distribution.
-        Here W is a list of weights for the t,x and y dimentions and b is a linear addition.
+        Create a basis for the kernel, distributed in a grid/random over part of domain defined by 'boundary'.
+        
         Arguments:
             N_D = number of dimensions
-            N_feat = number of features
-        """
+            N_feat = number of features          
+            boundary = a list of two lists describing the lower and upper corners of the domain.
+        """    
+        assert len(boundary[0])==N_D
         if np.isscalar(self.l2):
-            self.l2 = np.repeat(self.l2,N_D)
-        self.mu = np.random.uniform(low=boundary[0],high=boundary[1],size=[N_feat,len(boundary[0])])
+            self.l2 = np.repeat(self.l2,N_D)                    
+        if self.random:
+            self.mu = np.random.uniform(boundary[0],boundary[1],size=(N_feat,N_D))
+        else:
+            Nsteps = int(np.round(N_feat**(1/N_D))) #e.g. 100 features asked for, 2 dimensions -> 100^(1/2) = 10 steps in each dim.        
+            self.mu = meshgridndim(boundary,Nsteps)
+            #updated number of features...
+            N_feat = len(self.mu)
+
 
         self.N_D = N_D
         self.N_feat = N_feat
@@ -130,9 +156,10 @@ class GaussianBases(Kernel):
         Notes:
             uses self.mu, N_feat x D
         """
+        norm_const = (1/np.sqrt(np.prod(self.l2)))*(1/(0.5*np.pi)**(0.25*len(self.l2)))
         for centre in self.mu:
-            sqrdists = np.sum(((np.transpose(coords,list(range(1,coords.ndim))+[0])-centre)**2)/(self.l2**2),coords.ndim-1)
-            phi = (1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-sqrdists/2)
+            sqrdists = np.sum(((coords.T - centre)/self.l2)**2,-1).T
+            phi = norm_const * np.exp(-sqrdists)
             yield phi
             
     def getPhiValues(self,particles):
@@ -154,5 +181,3 @@ class GaussianBases(Kernel):
         for i,mus in enumerate(self.mu):
             phi[i,:,:]=((1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[:,:,0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[:,:,1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[:,:,2]))**2))).T
         return phi
-
-
