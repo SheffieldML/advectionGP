@@ -3,7 +3,6 @@ from advectionGP.wind import WindSimple
 
 class SquaredErrorSamplingCost():
     def generateQSampleLocations(model,nSamp):
-    
         samples = np.random.randn(nSamp,model.N_feat)
         
         return samples
