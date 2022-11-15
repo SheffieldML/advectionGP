@@ -23,6 +23,7 @@ class SquaredErrorSamplingCost():
     
     def dcost(conc,coords,obs,M,S):
         dcost=2*(conc[tuple([*coords.T])]-obs)*(1/M)*(1/S)
+        
         return dcost
         
     def costFunctionSystem(params,model,obs,obsloc,sample):
