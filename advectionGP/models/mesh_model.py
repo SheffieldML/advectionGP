@@ -119,7 +119,7 @@ class MeshModel():
         
         #print("Computing Source from Phi...")
         for i,phi in enumerate(self.kernel.getPhi(coords)):
-            print("%d/%d \r" % (i,self.kernel.N_feat),end="")
+            #print("%d/%d \r" % (i,self.kernel.N_feat),end="")
             self.source += phi*z[i]
         
         return self.source
@@ -135,15 +135,15 @@ class MeshModel():
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
         
         adjs = []
-        print("Calculating Adjoints...")
+        #print("Calculating Adjoints...")
         for j,H in enumerate(self.sensormodel.getHs(self)):
-            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            #print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
             adjs.append(self.computeAdjoint(H))
         print("");
         #this will run out of memory...
-        print("Calculating Phis...")
+        #print("Calculating Phis...")
         for i,phi in enumerate(self.kernel.getPhi(self.coords)):
-            print("%d/%d \r" % (i,self.N_feat),end="")
+            #print("%d/%d \r" % (i,self.N_feat),end="")
             for j,adj in enumerate(adjs):
                 X[i,j] = np.sum((phi*adj))*np.prod(delta)
         print("");
@@ -203,18 +203,18 @@ class MeshModel():
         X = np.zeros([self.N_feat,len(self.sensormodel.obsLocs)])
         
         adjs = []
-        print("Calculating Adjoints...")
+        #print("Calculating Adjoints...")
         for j,H in enumerate(self.sensormodel.getHs(self)):
-            print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
+            #print("%d/%d \r" % (j,len(self.sensormodel.obsLocs)),end="")
             adjs.append(self.computeAdjoint(H))
-        print("");
+        #print("");
         #this will run out of memory...
-        print("Calculating Phis...")
+        #print("Calculating Phis...")
         for i,phi in enumerate(self.kernel.getPhiDerivative(self.coords)):
-            print("%d/%d \r" % (i,len(self.kernel.W)),end="")
+            #print("%d/%d \r" % (i,len(self.kernel.W)),end="")
             for j,adj in enumerate(adjs):
                 X[i,j] = np.sum((phi*adj))*np.prod(delta)
-        print("");
+        #print("");
         #phi * v, --> scale
         self.dX = X
         return X

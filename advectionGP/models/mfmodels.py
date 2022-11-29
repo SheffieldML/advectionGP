@@ -69,13 +69,18 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
             newparticles[:,0]+=np.random.rand(len(newparticles))*(locB[0]-locA[0])
             particles.append(newparticles)
         particles = np.array(particles)
+        particles = particles.transpose([1,0,2])
         return particles
 
     def computeSourceFromPhiInterpolated(self,z,coords=None):
         """
         uses getPhi from the kernel and a given z vector to generate a source function     
-        set coords to a matrix: (3 x Grid Resolution), e.g. (3, 300, 80, 80)
+        set coords to a matrix: (Grid Resolution x 3), e.g. (300, 80, 80, 3)
                 e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
+        if coords is not set, we use self.coords (transposed)
+        
+        coords gets transposed internally to be [tt,xx,yy,cc]       
+        
         
         """
         if coords is None: coords = self.coords.transpose([1,2,3,0])
@@ -93,7 +98,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         keep = (gcs<source.shape) & (gcs>=0)
         gcs[~keep]=0 #just set to something that won't break stuff
         s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
-        s[~np.all(keep,-1)]=0
+        s[~np.all(keep,-1)]=0 #no contribution from space outside
         return s        
                 
     def computeModelRegressors(self,Nparticles=10):
@@ -101,9 +106,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         Computes the regressor matrix X, using the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
         X is [features x observations]
-        
+
         Nparticles = number of particles PER OBSERVATION.
-        
+
         uses just dt, Nt and boundary[0][0].
         """
         delta, Ns = self.getGridStepSize()
@@ -112,22 +117,27 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         scale = Nparticles / dt
 
         particles = self.genParticlesFromObservations(Nparticles)
-        
+        #particles is Nparticles_per_obs x NumObservations x NumDims [e.g. 3]
+
         #Place particles at the observations...
         print("Initialising particles...")
-        
+
         N_obs = len(self.sensormodel.obsLocs)
-        
+
         X = np.zeros([self.N_feat,N_obs])
-        print("Diffusing particles...")
+        #print("Diffusing particles...")
         for nit in range(Nt): 
-            print("%d/%d \r" % (nit,Nt),end="")
+            #print("%d/%d \r" % (nit,Nt),end="")
             wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
             particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
             particles[:,:,0]-=dt
 
-            keep = particles[:,0,0]>self.boundary[0][0] #could extend to be within grid space
-            X[:,keep] += np.sum(self.kernel.getPhiValues(particles),axis=(1))[:,keep]
+            #We remove a whole observation if it leaves the domain, not just single particles.
+            #we do this by testing the first particle in the observation
+            keep = particles[0,:,0]>self.boundary[0][0] #could extend to be within grid space
+            #self.kernel.getPhiValues(particles) produces Nfeat x Nobs x Nparticles
+            #we want to sum over the particles, so sum(above,axis=2), this will give us Nfeat x Nobs
+            X[:,keep] += np.sum(self.kernel.getPhiValues(particles),axis=-1)[:,keep]
             if np.sum(keep)==0: 
                 break
         X = np.array(X)/scale
@@ -147,7 +157,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         Nparticles = number of particles to use
         returns mean and variance
         """
-            
+
         delta, Ns = self.getGridStepSize() #only bit we use is dt and Nt
         dt = delta[0]
         Nt = Ns[0]
@@ -164,33 +174,40 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
 
         #Place particles at the places of interest...
         print("Initialising particles...")
-        
+
+
+
         if coords is None:
             coords = self.coords
-            
+
         if particles is None:
-            particles = coords.transpose([1,2,3,0]).copy()
+            ds = list(range(1,coords.ndim)); ds.insert(len(ds),0)
+            particles = coords.copy() #transpose(ds).copy()
+            print(particles.shape)
             particles = particles[None,:].repeat(Nparticles,axis=0)
+            print(particles.shape)
         print("Particle shape:")
+        assert particles.shape[-1]==len(self.resolution), "The last dimension of the particles array should be the dimensionality of the domain (e.g. 3 if [time,x,y])"
         print(particles.shape)
-        conc = np.zeros((Nsamps,)+particles.shape[:4]) #SAMPLING FROM Z
+        conc = np.zeros((Nsamps,)+particles.shape[:-1]) #SAMPLING FROM Z
         print("Diffusing particles...")
         for nit in range(Nt):
             print("%d/%d \r" % (nit,Nt),end="")
             wind = self.windmodel.getwind(particles[...,1:])*dt #how much each particle moves due to wind [backwards]
-            particles[...,1:]+=np.random.randn(particles.shape[0],particles.shape[1],particles.shape[2],particles.shape[3],2)*np.sqrt(2*dt*self.k_0) - wind
+            particles[...,1:]+=np.random.randn(*particles.shape[:-1],2)*np.sqrt(2*dt*self.k_0) - wind
             particles[...,0]-=dt
 
             keep = particles[...,0]>self.boundary[0][0] #could extend to be within grid space
-            
+
             if interpolateSource:
                 sources = np.array([self.computeSourceFromPhiInterpolated(z, particles) for z in Zs])
             else:
-                sources = np.array([self.computeSourceFromPhi(z, particles.transpose([4 ,0,1,2,3])) for z in Zs])            
+                ds = list(range(particles.ndim-1)); ds.insert(0,particles.ndim-1)                
+                sources = np.array([self.computeSourceFromPhi(z, particles.transpose(ds)) for z in Zs])                   
             conc[:,keep] += sources[:,keep] #np.sum(sources)#[:,keep]
             if np.sum(keep)==0: 
                 break
-            
+
         conc = np.array(conc) #/scale
         conc = np.mean(conc,axis=1)*dt #average over particles
         return np.mean(conc,axis=0),np.var(conc,axis=0),conc
