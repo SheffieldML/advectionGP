@@ -69,9 +69,27 @@ class EQ(Kernel):
         Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
         
         """
+        #c=1/(self.l2)
+        #norm = 1./np.sqrt(self.N_feat)
+        #return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
+        return np.array([p for p in self.getPhi(particles.transpose([2,1,0]))])
+
+    def oldGetPhiValues(self,particles):
+        """
+        Evaluates all features at location of all particles.
+                
+        Nearly a duplicate of getPhi, this returns phi for the locations in particles. 
+        
+        Importantly, particles is of shape N_ObsxN_Particlesx3,
+        (typically N_Obs is the number of observations, N_ParticlesPerObs is the number of particles/observation. 3 is the dimensionality of the space).
+        
+        Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
+        
+        """
         c=1/(self.l2)
         norm = 1./np.sqrt(self.N_feat)
         return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
+        
   
 
     def getPhiDerivative(self,coords):
@@ -153,20 +171,26 @@ class GaussianBases(Kernel):
 
         self.N_D = N_D
         self.N_feat = N_feat
+        self.boundary = boundary
  
     def getPhi(self,coords):
-        """
-        Generates a series (of N_feat) matrices, shape (Nt,Nx,Ny) of compact basis vectors using features from generateFeatures 
-        Arguments:
-            coords: an array of D x [Nt, Nx, Ny, Nz...] coords of points
-        Notes:
-            uses self.mu, N_feat x D
-        """
-        norm_const = (1/np.sqrt(np.prod(self.l2)))*(1/(0.5*np.pi)**(0.25*len(self.l2)))
-        for centre in self.mu:
-            sqrdists = np.sum(((coords.T - centre)/self.l2)**2,-1).T
-            phi = norm_const * np.exp(-sqrdists)
-            yield phi
+            """
+            Generates a series (of N_feat) matrices, shape (Nt,Nx,Ny) of compact basis vectors using features from generateFeatures 
+            Arguments:
+                coords: an array of D x [Nt, Nx, Ny, Nz...] coords of points
+            Notes:
+                uses self.mu, N_feat x D
+            """
+
+            norm_const = np.prod((0.5*self.l2**2 * np.pi)**(-0.25))
+            
+            #correct for density of features [subtract one from number in each dim, as the linspacing places points from one boundary to the other]
+            norm_const *= np.sqrt((np.prod((np.array(self.boundary[1])-np.array(self.boundary[0]))/((self.N_feat**(1/self.N_D)-1)))))
+            norm_const *= np.sqrt(self.sigma2)
+            for centre in self.mu:
+                sqrdists = np.sum(((coords.T - centre)/self.l2)**2,-1).T
+                phi = norm_const * np.exp(-sqrdists)
+                yield phi
             
     def getPhiValues(self,particles):
         """
@@ -181,9 +205,10 @@ class GaussianBases(Kernel):
         Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
         
         """
-        mu=self.mu
-        coordList=particles
-        phi=np.zeros([mu.shape[0],particles.shape[1],particles.shape[0]])
-        for i,mus in enumerate(self.mu):
-            phi[i,:,:]=((1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[:,:,0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[:,:,1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[:,:,2]))**2))).T
-        return phi
+        return np.array([p for p in self.getPhi(particles.transpose([2,1,0]))])
+        #mu=self.mu
+        #coordList=particles
+        #phi=np.zeros([mu.shape[0],particles.shape[1],particles.shape[0]])
+        #for i,mus in enumerate(self.mu):
+        #    phi[i,:,:]=((1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[0]**2))*((mus[0]-np.array(coordList[:,:,0]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[1]**2))*((mus[1]-np.array(coordList[:,:,1]))**2))*(1/np.sqrt(2*self.sigma2*np.pi))*np.exp(-(1/(2*self.l2[2]**2))*((mus[2]-np.array(coordList[:,:,2]))**2))).T
+        #return phi
