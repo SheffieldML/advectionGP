@@ -20,9 +20,16 @@ class NonNegConstraint():
         self.tm = TMVN(meanZ,covZ+np.eye(len(covZ))*jitter,planes.T,thinning=thinning,burnin=burnin,verbose=verbose,startpointnormalised=startpointnormalised)
         if self.verbose: print("Instantiation Complete")
         
-    def sample(self,Nsamples=10):
+    def sample(self,Nsamples=10):#,use_sparse_startpoint=False):
         if self.verbose: print("Sampling...")
-        samps = self.tm.sample(samples=Nsamples,usecaching=self.usecaching,W=self.model.kernel.W)
+        #use_sparse_startpoint disabled
+          #passing W allows the sampler to use a sparsely computed start point (i.e. only uses a subset of dimensions
+          #with low frequencies, setting the rest to zero).
+        #if use_sparse_startpoint:
+        #    W = self.model.kernel.W
+        #else:
+        #    W = None
+        samps = self.tm.sample(samples=Nsamples,usecaching=self.usecaching)#,W=W)
         return samps
     
     def check_convergence(self,Nchains=10,Nsamples=10):
@@ -31,3 +38,24 @@ class NonNegConstraint():
         """
         return np.max(self.tm.compute_gelman_rubin(Nchains=Nchains,Nsamples=Nsamples,usecaching=self.usecaching))
     
+
+def equality_constraint(self,model,m,c,knownS,newS):
+    """
+    Compute the new (posterior) mean and covariance of Z, given parameters:
+     model = the model used (this allows us to get phi)
+     meanZ, covZ = the mean and covariance of Z (without the constraint)
+     knownS = locations, specified by indices of rows in model.coords, that we wish to specify.
+     newS = values at these points
+   
+    Returns:
+     meanZ, covZ = the new mean and covariance of Z
+    """
+    Phi = []
+    for i,phi in enumerate(model.kernel.getPhi1D(model.coords)):
+        Phi.append(phi[:,0])
+    Phi = np.array(Phi).T
+    
+    inv = np.linalg.inv(Phi[knownS,:] @ c @ Phi[knownS,:].T + 0.1*np.eye(len(knownS)))
+    newmean = m - (Phi[knownS,:] @ c).T @ inv @ (Phi[knownS,:] @ m - newS)
+    newcov = c - (Phi[knownS,:] @ c).T @ inv @ (Phi[knownS,:] @ c)
+    return newmean, newcov
