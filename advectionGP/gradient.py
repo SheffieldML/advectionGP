@@ -11,9 +11,7 @@ class SquaredErrorSamplingCost():
         #X = np.random.randn(nSamp,model.N_feat)
         chol = np.linalg.cholesky(covZ)
         samp = (meanZ[:,None] + chol @ sample.T).T
-        
-        
-        
+
         return samp
     
     def cost(conc,coords,obs,M,S):
@@ -27,10 +25,11 @@ class SquaredErrorSamplingCost():
         
     def costFunctionSystem(params,model,obs,obsloc,sample):
         delta, Ns = model.getGridStepSize()
-        model.assignParameters(params)
-        model.computeModelRegressors()
         coords=model.getGridCoord(obsloc)
         samp = SquaredErrorSamplingCost.generateQSamples(obs,sample,model)
+        model.assignParameters(params)
+        #model.computeModelRegressors()
+        
         S = len(sample)
         M=len(obs) # number of observations
         c=0
@@ -45,14 +44,15 @@ class SquaredErrorSamplingCost():
         return c
 
     def costResponseDerivativeSystem(params,model,obs,obsloc,sample):
+        samp = SquaredErrorSamplingCost.generateQSamples(obs,sample,model)
         model.assignParameters(params)
-        model.computeModelRegressors()
+        #model.computeModelRegressors()
         delta,Ns = model.getGridStepSize()
         coords=model.getGridCoord(obsloc)
         
         #conc=model.computeConcentration(source)
         
-        samp = SquaredErrorSamplingCost.generateQSamples(obs,sample,model)
+        
         S = len(sample)
         M=len(obs) # number of observations
         L_m=np.zeros(len(params))
