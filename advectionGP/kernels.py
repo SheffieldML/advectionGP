@@ -108,7 +108,7 @@ class EQ(Kernel):
         self.result = np.zeros([self.N_feat, particles.shape[1], particles.shape[0]])
         threads = []
         self.threadblocksize = int(self.N_feat / 16)+1 #e.g. if there are 1999 features --> self.threadblocksize = 125 (but with one with 124). if there are 2001 -> 126 (one will have 125)
-        self.tempcoords = particles.transpose([2,1,0])
+        self.tempcoords = particles.T#transpose([2,1,0])
         for i in range(0,self.N_feat,self.threadblocksize):
             threads.append(threading.Thread(target=self.getPhiPopResultsBlock, args=(i,)))
         for t in threads:
@@ -249,7 +249,8 @@ class GaussianBases(Kernel):
         Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
         
         """
-        return np.array([p for p in self.getPhi(particles.transpose([2,1,0]))])
+        #return np.array([p for p in self.getPhi(particles.transpose([2,1,0]))])
+        return np.array([p for p in self.getPhi(particles.T)])
         #mu=self.mu
         #coordList=particles
         #phi=np.zeros([mu.shape[0],particles.shape[1],particles.shape[0]])
