@@ -125,9 +125,9 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         N_obs = len(self.sensormodel.obsLocs)
 
         X = np.zeros([self.N_feat,N_obs])
-        #print("Diffusing particles...")
-        for nit in range(Nt): 
-            #print("%d/%d \r" % (nit,Nt),end="")
+        print("Diffusing particles...")
+        for nit in range(Nt):
+            print("%d/%d \r" % (nit,Nt),end="",flush=True)
             wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
             particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
             particles[:,:,0]-=dt
@@ -144,7 +144,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         self.X = X
         self.particles = particles
         return X
-        
+
     def computeConcentration(self,meanZ=None,covZ=None,Nsamps=10,Nparticles=30,coords=None,particles=None,interpolateSource=False,Zs=None):
         """
         meanZ,covZ = mean and covariance of Z (used to sample Z, Nsamps times)
@@ -192,7 +192,8 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         conc = np.zeros((Nsamps,)+particles.shape[:-1]) #SAMPLING FROM Z
         print("Diffusing particles...")
         for nit in range(Nt):
-            print("%d/%d \r" % (nit,Nt),end="")
+            print("%d/%d \r" % (nit,Nt),end="",flush=True)
+            
             wind = self.windmodel.getwind(particles[...,1:])*dt #how much each particle moves due to wind [backwards]
             particles[...,1:]+=np.random.randn(*particles.shape[:-1],2)*np.sqrt(2*dt*self.k_0) - wind
             particles[...,0]-=dt
