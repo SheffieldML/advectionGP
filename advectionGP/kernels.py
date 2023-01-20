@@ -1,4 +1,5 @@
 import numpy as np
+import threading
 
 class Kernel():
     def __init__(self):
@@ -10,6 +11,28 @@ class Kernel():
     def getPhiValues(self,particles):
         assert False, "Not implemented" #TODO Turn into an exception
 
+
+
+
+
+    
+##@jit(nopython=True,parallel=True)
+#def getEQPhiValues(coords,N_feat,N_ParticlesPerObs, N_Obs,sigma2,l2, W, b):
+#    def computeEQitem(idx):
+#        Phi[idx,:,:] = norm*np.sqrt(2*sigma2)*np.cos(np.dot(coords.T,(W[idx]/l2)).T + b[idx])
+#    
+#    Phi = np.zeros((N_feat, N_ParticlesPerObs, N_Obs))
+#    norm = 1./np.sqrt(N_feat)
+#    
+#    with multiprocess.Pool() as pool:
+#        for res in pool.imap_unordered(computeEQitem,range(N_feat)):
+#            pass
+#            
+#    #for fi in range(N_feat): #,(wit,bit) in enumerate(zip(W,b)):        
+#    #    #Phi[fi,:,:]=norm*np.sqrt(2*sigma2)*np.cos(np.einsum('i,i...->...',wit/l2,coords)+ bit)
+#    #    Phi[fi,:,:]=computeEQitem(fi)#norm,sigma2,coords,wit,l2,bit)
+#    return Phi
+           
 class EQ(Kernel):
     def __init__(self,l2,sigma2):
         """
@@ -39,7 +62,8 @@ class EQ(Kernel):
         self.N_D = N_D
         self.N_feat = N_feat
         
- 
+
+    
     def getPhi(self,coords):
         """
         Generates a (N_feat,Nt,Nx,Ny) matrix of basis vectors using features from generateFeatures 
@@ -57,6 +81,18 @@ class EQ(Kernel):
             phi=norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('i,i...->...',w/self.l2,coords)+ b)
             yield phi                       
 
+
+    def getPhiPopResultsBlock(self,i):
+        """
+        Used by getPhiValues (helps with threading)
+        """
+        norm = 1./np.sqrt(self.N_feat)
+        w = self.W[i:i+self.threadblocksize]
+        b = self.b[i:i+self.threadblocksize]
+        self.result[i:i+self.threadblocksize] = norm*np.sqrt(2*self.sigma2)*np.cos(((self.tempcoords.T@(w/self.l2).T) + b).T)
+
+
+        
     def getPhiValues(self,particles):
         """
         Evaluates all features at location of all particles.
@@ -69,10 +105,18 @@ class EQ(Kernel):
         Returns array (Nfeats, N_ParticlesPerObs, N_Obs)
         
         """
-        #c=1/(self.l2)
-        #norm = 1./np.sqrt(self.N_feat)
-        #return norm*np.sqrt(2*self.sigma2)*np.cos(np.einsum('ij,lkj',self.W/self.l2,particles)+self.b[:,None,None])
-        return np.array([p for p in self.getPhi(particles.transpose([2,1,0]))])
+        self.result = np.zeros([self.N_feat, particles.shape[1], particles.shape[0]])
+        threads = []
+        self.threadblocksize = int(self.N_feat / 16)+1 #e.g. if there are 1999 features --> self.threadblocksize = 125 (but with one with 124). if there are 2001 -> 126 (one will have 125)
+        self.tempcoords = particles.transpose([2,1,0])
+        for i in range(0,self.N_feat,self.threadblocksize):
+            threads.append(threading.Thread(target=self.getPhiPopResultsBlock, args=(i,)))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        return self.result
+
 
     def oldGetPhiValues(self,particles):
         """
