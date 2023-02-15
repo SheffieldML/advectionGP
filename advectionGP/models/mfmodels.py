@@ -7,7 +7,7 @@ def gethash(z):
     return hash(z.tobytes())
         
 class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
-    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,k_0,R=0,N_feat=25):
+    def __init__(self,boundary,resolution,kernel,noiseSD,sensormodel,windmodel,k_0,R=0,N_feat=25,walls=None):
         """
         This model uses particle approximation to compute the adjoints for the advection/diffusion model
 
@@ -38,6 +38,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         super().__init__(boundary,resolution,kernel,noiseSD,sensormodel,N_feat)
         self.windmodel = windmodel
         self.k_0 = k_0
+        self.walls = walls
         #self.R=R
         if R!=0: assert False, "Not yet implemented reaction term, set R to zero."      
         
@@ -62,9 +63,15 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
             sensormodel = self.sensormodel
         particles = []
         N_obs = len(sensormodel.obsLocs)
+        
+        axesA = list(range(sensormodel.obsLocs.shape[1]))
+        axesB = axesA.copy()
+        del axesA[1]
+        del axesB[0]
+        
         for obsi in range(N_obs):
-            locA = sensormodel.obsLocs[obsi,[0,2,3]]
-            locB = sensormodel.obsLocs[obsi,[1,2,3]]
+            locA = sensormodel.obsLocs[obsi,axesA]
+            locB = sensormodel.obsLocs[obsi,axesB]
             newparticles = np.repeat(locA[None,:],Nparticles,0).astype(float)
             newparticles[:,0]+=np.random.rand(len(newparticles))*(locB[0]-locA[0])
             particles.append(newparticles)
@@ -83,7 +90,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         
         
         """
-        if coords is None: coords = self.coords.transpose([1,2,3,0])
+        if coords is None: coords = self.coords.transpose(list(range(len(self.coords.shape)))[1:]+[0])
         
         zhash = gethash(z)
         if zhash not in self.sourcecache:
@@ -97,11 +104,13 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         gcs = self.getGridCoord(coords)
         keep = (gcs<source.shape) & (gcs>=0)
         gcs[~keep]=0 #just set to something that won't break stuff
-        s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
+        
+        if gcs.shape[-1]==3: s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
+        if gcs.shape[-1]==4: s = source[gcs[...,0],gcs[...,1],gcs[...,2],gcs[...,3]] #TODO Generalise
         s[~np.all(keep,-1)]=0 #no contribution from space outside
         return s        
                 
-    def computeModelRegressors(self,Nparticles=10):
+    def computeModelRegressors(self,Nparticles=10,sensormodel=None):
         """
         Computes the regressor matrix X, using the sensor model and getPhi from the kernel.
         X here is used to infer the distribution of z (and hence the source).
@@ -116,25 +125,33 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         Nt = Ns[0]
         scale = Nparticles / dt
 
-        particles = self.genParticlesFromObservations(Nparticles)
+        if sensormodel is None:
+            sensormodel = self.sensormodel
+        particles = self.genParticlesFromObservations(Nparticles,sensormodel)
         #particles is Nparticles_per_obs x NumObservations x NumDims [e.g. 3]
 
         #Place particles at the observations...
         print("Initialising particles...")
 
-        N_obs = len(self.sensormodel.obsLocs)
+        N_obs = len(sensormodel.obsLocs)
 
         X = np.zeros([self.N_feat,N_obs])
         print("Diffusing particles...")
         for nit in range(Nt):
             print("%d/%d \r" % (nit,Nt),end="",flush=True)
             wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
-            particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],2)*np.sqrt(2*dt*self.k_0) - wind
+            particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],particles.shape[2]-1)*np.sqrt(2*dt*self.k_0) - wind
             particles[:,:,0]-=dt
 
             #We remove a whole observation if it leaves the domain, not just single particles.
             #we do this by testing the first particle in the observation
             keep = particles[0,:,0]>self.boundary[0][0] #could extend to be within grid space
+            if self.walls is not None:
+                for dim,val,direction in self.walls:
+                    if direction<0:
+                        particles[particles[:,:,dim]<val,dim] = val
+                    else:
+                        particles[particles[:,:,dim]>val,dim] = val
             #self.kernel.getPhiValues(particles) produces Nfeat x Nobs x Nparticles
             #we want to sum over the particles, so sum(above,axis=2), this will give us Nfeat x Nobs
             X[:,keep] += np.sum(self.kernel.getPhiValues(particles),axis=-1)[:,keep]
@@ -195,10 +212,16 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
             print("%d/%d \r" % (nit,Nt),end="",flush=True)
             
             wind = self.windmodel.getwind(particles[...,1:])*dt #how much each particle moves due to wind [backwards]
-            particles[...,1:]+=np.random.randn(*particles.shape[:-1],2)*np.sqrt(2*dt*self.k_0) - wind
+            particles[...,1:]+=np.random.randn(*particles.shape[:-1],particles.shape[-1]-1)*np.sqrt(2*dt*self.k_0) - wind
             particles[...,0]-=dt
 
             keep = particles[...,0]>self.boundary[0][0] #could extend to be within grid space
+            if self.walls is not None:
+                for dim,val,direction in self.walls:
+                    if direction<0:
+                        particles[particles[...,dim]<val,dim] = val
+                    else:
+                        particles[particles[...,dim]>val,dim] = val
 
             if interpolateSource:
                 sources = np.array([self.computeSourceFromPhiInterpolated(z, particles) for z in Zs])

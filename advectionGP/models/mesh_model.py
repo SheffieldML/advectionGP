@@ -47,6 +47,7 @@ class MeshModel():
         if self.N_D==1: self.coords=np.asarray(np.meshgrid(gg[0],indexing='ij'))
         if self.N_D==2: self.coords=np.asarray(np.meshgrid(gg[0],gg[1],indexing='ij'))
         if self.N_D==3: self.coords=np.asarray(np.meshgrid(gg[0],gg[1],gg[2],indexing='ij'))
+        if self.N_D==4: self.coords=np.asarray(np.meshgrid(gg[0],gg[1],gg[2],gg[3],indexing='ij'))
       
         #Compute some variables useful for PDEs
         
@@ -60,14 +61,7 @@ class MeshModel():
         """
         Calculates useful scalars for the PDE model
         outputs:
-            dt: time grid size
-            dx: x direction grid size
-            dy: y direction grid size
-            dx2 = dx**2
-            dy2 = dy**2
-            Nt: Number of evaluation points in time
-            Nx: Number of evaluation points in x axis
-            Ny: Number of evaluation points in y axis
+            delta (step size in all the dimensions of the model) and Ns
         """
         
         delta=(self.boundary[1]-self.boundary[0])/self.resolution

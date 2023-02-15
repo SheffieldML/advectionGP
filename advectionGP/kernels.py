@@ -115,7 +115,9 @@ class EQ(Kernel):
             t.start()
         for t in threads:
             t.join()
-        return self.result
+        result = self.result
+        self.result = None #trying to avoid keeping this in memory
+        return result
 
 
     def oldGetPhiValues(self,particles):

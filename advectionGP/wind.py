@@ -23,7 +23,7 @@ class Wind():
         raise NotImplementedError
     
 class WindSimple(Wind):
-    def __init__(self,speedx,speedy):
+    def __init__(self,speedx,speedy,speedz=None):
         """
         Same wind direction/speed for all time steps.
         
@@ -34,13 +34,19 @@ class WindSimple(Wind):
         """
         self.speedx = speedx
         self.speedy = speedy
+        self.speedz = speedz
 
     def getwind(self,coords):
         """
         Returns the wind at given times and places, pass it [something]x3 array [time,x,y].
+        
+        Added hack to add 3rd axis to space: If speedz is set in constructor then it returns [time,x,y,z]
         """
         #return np.repeat(np.array([self.speedx,self.speedy])[None,:],len(coords),0)
-        return np.repeat(np.array([self.speedx,self.speedy])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+        if self.speedz is None:
+            return np.repeat(np.array([self.speedx,self.speedy])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+        else:
+            return np.repeat(np.array([self.speedx,self.speedy,self.speedz])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
 
     def getu(self,model):
         u = []

@@ -39,7 +39,7 @@ class NonNegConstraint():
         return np.max(self.tm.compute_gelman_rubin(Nchains=Nchains,Nsamples=Nsamples,usecaching=self.usecaching))
     
 
-def equality_constraint(self,model,m,c,knownS,newS):
+def equality_constraint(model,m,c,knownS,newS):
     """
     Compute the new (posterior) mean and covariance of Z, given parameters:
      model = the model used (this allows us to get phi)
@@ -51,8 +51,8 @@ def equality_constraint(self,model,m,c,knownS,newS):
      meanZ, covZ = the new mean and covariance of Z
     """
     Phi = []
-    for i,phi in enumerate(model.kernel.getPhi1D(model.coords)):
-        Phi.append(phi[:,0])
+    for i,phi in enumerate(model.kernel.getPhi(model.coords)):
+        Phi.append(phi)
     Phi = np.array(Phi).T
     
     inv = np.linalg.inv(Phi[knownS,:] @ c @ Phi[knownS,:].T + 0.1*np.eye(len(knownS)))
