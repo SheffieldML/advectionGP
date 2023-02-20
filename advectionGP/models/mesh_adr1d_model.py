@@ -91,7 +91,11 @@ class AdjointAdvectionDiffusionReaction1DModel(AdvectionDiffusionReaction1DModel
         return dmH
     
     def assignParameters(self,params):
-        self.windmodel=WindSimple(params[0],0)
+        u1 = params[0]*np.sin(2*coords[0])
+        u2 = 0*np.ones(res)
+        u=np.array([u1,u2])
+        #self.windmodel=WindFixU(u) # establish fixed wind model
+        #self.windmodel=WindSimple(params[0],0)
         self.u=self.windmodel.getu(self)
         self.k_0=params[1]
         self.R=params[2]
