@@ -116,7 +116,7 @@ class SquaredErrorSamplingCost():
             dmH=model.getSourceLengthscaleDerivative(samples,obs,sample[i])
             dc=np.zeros(model.resolution) #initialise cost derivative
             dc[tuple([*coords.T])] = SquaredErrorSamplingCost.dcost(conc,coords,obs,M,S) # cost derivative approximated with step function
-            integrand = -model.computeAdjoint(-dc)*dmH
+            integrand = model.computeAdjoint(-dc)*dmH
             L_m += np.sum(integrand)*np.prod(delta)
-
+        
         return L_m

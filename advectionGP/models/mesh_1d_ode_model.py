@@ -115,6 +115,6 @@ class AdjointSecondOrderODEModel(SecondOrderODEModel):
         self.eta=params[1]
         
     def computeSourceLengthscaleDerivative(self,samples,obs,samp):
-        dmH=-self.computeSourceDerivative(samples,obs,samp)/self.k_0
+        dmH=-self.computeSourceDerivative(samples,obs,samp)
         return dmH    
 
