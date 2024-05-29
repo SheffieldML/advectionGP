@@ -104,7 +104,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         gcs = self.getGridCoord(coords)
         keep = (gcs<source.shape) & (gcs>=0)
         gcs[~keep]=0 #just set to something that won't break stuff
-        
+        if gcs.shape[-1]==2: s = source[gcs[...,0],gcs[...,1]]        
         if gcs.shape[-1]==3: s = source[gcs[...,0],gcs[...,1],gcs[...,2]]
         if gcs.shape[-1]==4: s = source[gcs[...,0],gcs[...,1],gcs[...,2],gcs[...,3]] #TODO Generalise
         s[~np.all(keep,-1)]=0 #no contribution from space outside

@@ -81,7 +81,7 @@ class MeshModel():
                 
     def computeObservations(self,addNoise=False):
         """       
-        Generates test observations by calculating the inner product of the filter function from the senor model and a given self.conc.
+        Generates test observations by calculating the inner product of the filter function from the sensor model and a given self.conc.
         Arguments:
             addNoise: if addNoise is True then random noise is added to the observations from a normal distribution with mean 0 and standard deviation noiseSD. 
         """
@@ -162,7 +162,7 @@ class MeshModel():
         return meanZ, covZ
         
         
-    def computeSourceDistribution(self,meanZ,covZ):
+    def computeSourceDistribution(self,meanZ,covZ,coords=None):
         """
         Computes the S distribution (at each grid point) using the previously inferred mean and covariance of z. Does not compute joint distribution due to required size of covariance matrix
         Arguments:
@@ -171,12 +171,16 @@ class MeshModel():
         """
         #uses self.X and observations y.
         #dt,dx,dy,dx2,dy2,Nt,Nx,Ny = self.getGridStepSize()
+        
+        if coords is None:
+            coords = self.coords
+            
         delta, Ns = self.getGridStepSize()
         
         meanSource = self.computeSourceFromPhi(meanZ)
         varSource = np.zeros(Ns)#((Nt,Nx,Ny))
-        for i,phii in enumerate(self.kernel.getPhi(self.coords)):
-            for j,phij in enumerate(self.kernel.getPhi(self.coords)):
+        for i,phii in enumerate(self.kernel.getPhi(coords)):
+            for j,phij in enumerate(self.kernel.getPhi(coords)):
                 varSource += covZ[i,j]*phii*phij
         
         

@@ -54,6 +54,29 @@ class WindSimple(Wind):
         u.append(np.full(model.resolution,self.speedy)) #y direction wind
         return u
         
+class WindSimple1d(Wind):
+    def __init__(self,speedx):
+        """
+        Same wind direction/speed for all time steps.
+        
+        speedx = Wind speed
+        
+        This is the direction the wind is going to.
+        """
+        self.speedx = speedx
+
+    def getwind(self,coords):
+        """
+        Returns the wind at given times and places, pass it [something]x2 array [time,x].
+        """
+        return np.repeat(np.array([self.speedx])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+       
+
+    def getu(self,model):
+        u = []
+        u.append(np.full(model.resolution,self.speedx)) #x direction wind        
+        return u        
+        
 class WindFixU(Wind):
     def __init__(self,u):
         """Class for if you need to set the exact matrices of wind.
