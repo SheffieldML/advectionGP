@@ -27,8 +27,8 @@ class WindSimple(Wind):
         """
         Same wind direction/speed for all time steps.
         
-        speedx = Wind in North direction ("up")
-        speedy = Wind in East direction ("right")
+        speedx = Wind in East direction ("right")
+        speedy = Wind in North direction ("up")
         
         This is the direction the wind is going to.
         """
@@ -44,9 +44,9 @@ class WindSimple(Wind):
         """
         #return np.repeat(np.array([self.speedx,self.speedy])[None,:],len(coords),0)
         if self.speedz is None:
-            return np.repeat(np.array([self.speedx,self.speedy])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+            return np.repeat(np.array([self.speedx,self.speedy])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords[...,1:].shape)
         else:
-            return np.repeat(np.array([self.speedx,self.speedy,self.speedz])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords.shape)
+            return np.repeat(np.array([self.speedx,self.speedy,self.speedz])[None,:],np.prod(coords.shape[:-1]),axis=0).reshape(coords[...,1:].shape)
 
     def getu(self,model):
         u = []

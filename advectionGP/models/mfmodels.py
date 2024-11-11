@@ -139,7 +139,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         print("Diffusing particles...")
         for nit in range(Nt):
             print("%d/%d \r" % (nit,Nt),end="",flush=True)
-            wind = self.windmodel.getwind(particles[:,:,1:])*dt #how much each particle moves due to wind [backwards]
+            wind = self.windmodel.getwind(particles)*dt #how much each particle moves due to wind [backwards]
             particles[:,:,1:]+=np.random.randn(particles.shape[0],particles.shape[1],particles.shape[2]-1)*np.sqrt(2*dt*self.k_0) - wind
             particles[:,:,0]-=dt
 
@@ -211,7 +211,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         for nit in range(Nt):
             print("%d/%d \r" % (nit,Nt),end="",flush=True)
             
-            wind = self.windmodel.getwind(particles[...,1:])*dt #how much each particle moves due to wind [backwards]
+            wind = self.windmodel.getwind(particles)*dt #how much each particle moves due to wind [backwards]
             particles[...,1:]+=np.random.randn(*particles.shape[:-1],particles.shape[-1]-1)*np.sqrt(2*dt*self.k_0) - wind
             particles[...,0]-=dt
 
