@@ -157,25 +157,28 @@ class EQ(Kernel):
             yield phi
             
 
+
 def meshgridndim(boundary,Nsteps,moveEdgeIn=False):
     """Returns points in a uniform grid within the boundary
     
     Parameters:
         boundary = a list of two lists describing the lower and upper corners of the domain.
             each list will be of Ndims long.
-        Nsteps = number of steps in each dimension.
+        Nsteps = number of steps in each dimension (or list, one item per dimension).
         moveEdgeIn = whether to slightly move the top edge in to ensure points lie inside boundary. [default = False]
     Returns:
         Returns a matrix of shape: (Nsteps^Ndims, Ndims)
     """    
     Ndims = len(boundary[0])
+    if np.isscalar(Nsteps):
+        Nsteps = np.repeat(Nsteps,Ndims)
     if moveEdgeIn:
         newboundary = []
         newboundary.append(boundary[0])
         newboundary.append(boundary[1]-1e-5)
         boundary = newboundary
-    g = np.array(np.meshgrid(*[np.linspace(a,b,Nsteps) for a,b in zip(boundary[0],boundary[1])]))
-    return g.reshape(Ndims,Nsteps**Ndims).T
+    g = np.array(np.meshgrid(*[np.linspace(a,b,nstep) for a,b,nstep in zip(boundary[0],boundary[1],Nsteps)]))
+    return g.reshape(Ndims,np.prod(Nsteps)).T
 
 from advectionGP.kernels import Kernel
 class GaussianBases(Kernel):

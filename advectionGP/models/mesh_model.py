@@ -68,15 +68,17 @@ class MeshModel():
         Ns=self.resolution
         return delta,Ns
         
-    def getGridCoord(self,realPos):
+    def getGridCoord(self,realPos,floorResult=True):
         """
         Gets the location on the mesh for a real position
         I.e. Given a valume in m getGridCoord returns the location on the grid
         
         todo: assertion for out of bounds value
         """
-        return np.floor(self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])).astype(int)
-    
+        if floorResult:
+            return np.floor(self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])).astype(int)
+        else:
+            return self.resolution*(realPos - self.boundary[0])/(self.boundary[1]-self.boundary[0])
                 
                 
     def computeObservations(self,addNoise=False):
@@ -107,7 +109,11 @@ class MeshModel():
                 e.g. coords=np.asarray(np.meshgrid(tt,xx,yy,indexing='ij'))
         
         """
-        if coords is None: coords = self.coords
+        if coords is None: 
+            print("Coords NONE!")
+            coords = self.coords
+        print("Computing over coords...")
+        print(coords.shape)
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
         
