@@ -117,9 +117,9 @@ class MeshModel():
         resolution = np.array(coords.shape[1:])
         self.source = np.zeros(resolution) 
         
-        #print("Computing Source from Phi...")
+        print("Computing Source from Phi...",flush=True)
         for i,phi in enumerate(self.kernel.getPhi(coords)):
-            #print("%d/%d \r" % (i,self.kernel.N_feat),end="")
+            print("%d/%d \r" % (i,self.kernel.N_feat),end="",flush=True)
             self.source += phi*z[i]
         
         return self.source
