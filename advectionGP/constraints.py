@@ -15,7 +15,14 @@ class NonNegConstraint():
         if self.verbose: print("Computing mean and covariance of Z distribution")
         if meanZ is None:
             meanZ, covZ = model.computeZDistribution(yTrain)
-        planes = np.array([phi for phi in model.kernel.getPhi(Xconstrainlocs.T)])
+        print("Building half-space planes...")
+        #planes = np.array([phi for phi in model.kernel.getPhi(Xconstrainlocs.T)])
+        #converted to loop to add progress msg.
+        planes = []
+        for i,phi in enumerate(model.kernel.getPhi(Xconstrainlocs.T)):
+            print("%d/%d\r" % (i,len(Xconstrainlocs.T)),end="")
+            planes.append(phi)
+        planes = np.array(planes)
         if self.verbose: print("Instantiating Truncated MVN object")
         self.tm = TMVN(meanZ,covZ+np.eye(len(covZ))*jitter,planes.T,thinning=thinning,burnin=burnin,verbose=verbose,startpointnormalised=startpointnormalised)
         if self.verbose: print("Instantiation Complete")

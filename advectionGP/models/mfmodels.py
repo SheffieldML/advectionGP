@@ -200,9 +200,7 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         if particles is None:
             ds = list(range(1,coords.ndim)); ds.insert(len(ds),0)
             particles = coords.copy() #transpose(ds).copy()
-            print(particles.shape)
             particles = particles[None,:].repeat(Nparticles,axis=0)
-            print(particles.shape)
         print("Particle shape:")
         assert particles.shape[-1]==len(self.resolution), "The last dimension of the particles array should be the dimensionality of the domain (e.g. 3 if [time,x,y])"
         print(particles.shape)
