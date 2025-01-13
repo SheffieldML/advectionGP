@@ -12,7 +12,7 @@ class NonNegConstraint():
         self.model = model
         self.usecaching = usecaching
         self.verbose = verbose
-        if self.verbose: print("Computing mean and covariance of Z distribution")
+        if self.verbose: print("Computing mean and covariance of Z distribution",flush=True)
         if meanZ is None:
             meanZ, covZ = model.computeZDistribution(yTrain)
         print("Building half-space planes...")
@@ -20,15 +20,16 @@ class NonNegConstraint():
         #converted to loop to add progress msg.
         planes = []
         for i,phi in enumerate(model.kernel.getPhi(Xconstrainlocs.T)):
-            print("%d/%d\r" % (i,len(Xconstrainlocs.T)),end="")
+            if self.verbose: print("%d/%d\r" % (i,len(meanZ)),end="",flush=True)
             planes.append(phi)
         planes = np.array(planes)
-        if self.verbose: print("Instantiating Truncated MVN object")
+        if self.verbose: print("")
+        if self.verbose: print("Instantiating Truncated MVN object",flush=True)
         self.tm = TMVN(meanZ,covZ+np.eye(len(covZ))*jitter,planes.T,thinning=thinning,burnin=burnin,verbose=verbose,startpointnormalised=startpointnormalised)
-        if self.verbose: print("Instantiation Complete")
+        if self.verbose: print("Instantiation Complete",flush=True)
         
     def sample(self,Nsamples=10):#,use_sparse_startpoint=False):
-        if self.verbose: print("Sampling...")
+        if self.verbose: print("Sampling...",flush=True)
         #use_sparse_startpoint disabled
           #passing W allows the sampler to use a sparsely computed start point (i.e. only uses a subset of dimensions
           #with low frequencies, setting the rest to zero).
@@ -37,6 +38,7 @@ class NonNegConstraint():
         #else:
         #    W = None
         samps = self.tm.sample(samples=Nsamples,usecaching=self.usecaching)#,W=W)
+        if self.verbose: print("Constraint Sampling Complete",flush=True)
         return samps
     
     def check_convergence(self,Nchains=10,Nsamples=10):
