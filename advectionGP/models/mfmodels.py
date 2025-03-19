@@ -69,14 +69,18 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         del axesA[1]
         del axesB[0]
         
-        for obsi in range(N_obs):
-            locA = sensormodel.obsLocs[obsi,axesA]
-            locB = sensormodel.obsLocs[obsi,axesB]
-            newparticles = np.repeat(locA[None,:],Nparticles,0).astype(float)
-            newparticles[:,0]+=np.random.rand(len(newparticles))*(locB[0]-locA[0])
-            particles.append(newparticles)
-        particles = np.array(particles)
-        particles = particles.transpose([1,0,2])
+        try: #Try using the observation sensor model class object to generate the particles,
+             #if it can't, then I'll use the old code, below for doing this.
+            particles = sensormodel.genParticles(Nparticles)
+        except AttributeError:        
+            for obsi in range(N_obs):
+                locA = sensormodel.obsLocs[obsi,axesA]
+                locB = sensormodel.obsLocs[obsi,axesB]
+                newparticles = np.repeat(locA[None,:],Nparticles,0).astype(float)
+                newparticles[:,0]+=np.random.rand(len(newparticles))*(locB[0]-locA[0])
+                particles.append(newparticles)
+            particles = np.array(particles)
+            particles = particles.transpose([1,0,2])
         return particles
 
     def computeSourceFromPhiInterpolated(self,z,coords=None):

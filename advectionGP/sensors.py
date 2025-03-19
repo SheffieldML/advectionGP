@@ -4,10 +4,12 @@ class SensorModel():
     def __init__(self):
         """Builds H"""
         assert False, "Not implemented" #TODO Turn into an exception
-
         
     def getHs(self):
         assert False, "Not implemented" #TODO Turn into an exception
+        
+    #Can also implement:
+    #genParticlesFromObservations(self,Nparticles)
     
 class FixedSensorModel(SensorModel):
     def __init__(self,obsLocations,spatialAveraging):
@@ -120,5 +122,13 @@ class FixedSensorModel(SensorModel):
                 h[start[0]:end[0]] = 1/((end[0]-start[0])*dt) 
                 yield h
         
-#X = an N by 4 matrix of sensor times and locations [time_start, time_end, x, y]
-#y = an N long vector of the measurements associated with the sensors.
+class RemoteSensingModel(SensorModel):
+    def __init__(self):
+        """TODO
+        """
+    def genParticles(self,Nparticles):
+        particles = []
+        for obsi in range(10):
+            particles.append(np.random.rand(Nparticles,3)*np.array([2,0.5,0])+np.array([obsi*3,0,obsi]))
+        return np.array(particles)
+    
