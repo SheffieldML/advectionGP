@@ -9,7 +9,7 @@ class SensorModel():
         assert False, "Not implemented" #TODO Turn into an exception
         
     #Can also implement:
-    #genParticlesFromObservations(self,Nparticles)
+    #genParticles(self,Nparticles)
     
 class FixedSensorModel(SensorModel):
     def __init__(self,obsLocations,spatialAveraging):

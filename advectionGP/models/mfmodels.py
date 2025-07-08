@@ -62,17 +62,19 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         if sensormodel is None:
             sensormodel = self.sensormodel
         particles = []
-        N_obs = len(sensormodel.obsLocs)
-        
-        axesA = list(range(sensormodel.obsLocs.shape[1]))
-        axesB = axesA.copy()
-        del axesA[1]
-        del axesB[0]
+
         
         try: #Try using the observation sensor model class object to generate the particles,
              #if it can't, then I'll use the old code, below for doing this.
             particles = sensormodel.genParticles(Nparticles)
         except AttributeError:        
+            N_obs = len(sensormodel.obsLocs)
+            
+            axesA = list(range(sensormodel.obsLocs.shape[1]))
+            axesB = axesA.copy()
+            del axesA[1]
+            del axesB[0]
+        
             for obsi in range(N_obs):
                 locA = sensormodel.obsLocs[obsi,axesA]
                 locB = sensormodel.obsLocs[obsi,axesB]
@@ -137,7 +139,8 @@ class MeshFreeAdjointAdvectionDiffusionModel(MeshModel):
         #Place particles at the observations...
         print("Initialising particles...")
 
-        N_obs = len(sensormodel.obsLocs)
+        #N_obs = len(sensormodel.obsLocs)
+        N_obs = particles.shape[1] #TODO Test update -- using particles to get the number of observations instead of the 'obsLocs' array.
 
         X = np.zeros([self.N_feat,N_obs])
         print("Diffusing particles...")
